@@ -1,0 +1,4 @@
+{
+	parent: "block/slab_down_all",
+	textures: { all: "blocks/stone_brick" },
+}

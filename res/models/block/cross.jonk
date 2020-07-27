@@ -1,0 +1,27 @@
+{
+	textures: { particle: "$cross" },
+	quads: [
+		{
+			texture: "$cross",
+			doubleSided: true,
+			renderLayer: "cutout",
+			verts: [
+				{ pos: [ 0.854, 1, 0.146 ], uv: [ 0, 0 ] },
+				{ pos: [ 0.854, 0, 0.146 ], uv: [ 0, 1 ] },
+				{ pos: [ 0.146, 1, 0.854 ], uv: [ 1, 0 ] },
+				{ pos: [ 0.146, 0, 0.854 ], uv: [ 1, 1 ] },
+			],
+		},
+		{
+			texture: "$cross",
+			doubleSided: true,
+			renderLayer: "cutout",
+			verts: [
+				{ pos: [ 0.854, 1, 0.854 ], uv: [ 0, 0 ] },
+				{ pos: [ 0.854, 0, 0.854 ], uv: [ 0, 1 ] },
+				{ pos: [ 0.146, 1, 0.146 ], uv: [ 1, 0 ] },
+				{ pos: [ 0.146, 0, 0.146 ], uv: [ 1, 1 ] },
+			],
+		},
+	],
+}

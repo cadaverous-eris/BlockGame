@@ -1,0 +1,12 @@
+{
+	parent: "block/slab_down",
+	textures: {
+		particle: "$all",
+		down: "$all",
+		up: "$all",
+		north: "$all",
+		south: "$all",
+		west: "$all",
+		east: "$all",
+	},
+}

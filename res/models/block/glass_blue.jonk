@@ -1,0 +1,4 @@
+{
+	parent: "block/cube_all_transparent_cutout",
+	textures: { all: "blocks/glass_blue" },
+}

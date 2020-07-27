@@ -1,0 +1,11 @@
+# Visual Studio Code
+.vscode/
+
+# clangd
+.clangd/
+
+# Build Folder
+build/
+
+# Run Folder
+run/

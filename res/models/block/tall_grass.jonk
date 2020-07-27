@@ -1,0 +1,4 @@
+{
+	parent: "block/cross_colored",
+	textures: { cross: "blocks/grass_tall" },
+}

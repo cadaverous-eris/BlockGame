@@ -1,0 +1,75 @@
+{
+	quads: [
+		{
+			name: "bottom",
+			texture: "$down",
+			cullFace: "down",
+			uvLock: true,
+			verts: [
+				{ pos: [ 0, 0, 1 ], uv: [ 0, 0 ] },
+				{ pos: [ 0, 0, 0 ], uv: [ 0, 1 ] },
+				{ pos: [ 1, 0, 1 ], uv: [ 1, 0 ] },
+				{ pos: [ 1, 0, 0 ], uv: [ 1, 1 ] },
+			],
+		},
+		{
+			name: "top",
+			texture: "$up",
+			uvLock: true,
+			verts: [
+				{ pos: [ 0, 0.5, 0 ], uv: [ 0, 0 ] },
+				{ pos: [ 0, 0.5, 1 ], uv: [ 0, 1 ] },
+				{ pos: [ 1, 0.5, 0 ], uv: [ 1, 0 ] },
+				{ pos: [ 1, 0.5, 1 ], uv: [ 1, 1 ] },
+			],
+		},
+		{
+			name: "north",
+			texture: "$north",
+			cullFace: "north",
+			uvLock: true,
+			verts: [
+				{ pos: [ 1, 0.5, 0 ], uv: [ 0, 0.5 ] },
+				{ pos: [ 1, 0, 0 ], uv: [ 0, 1 ] },
+				{ pos: [ 0, 0.5, 0 ], uv: [ 1, 0.5 ] },
+				{ pos: [ 0, 0, 0 ], uv: [ 1, 1 ] },
+			],
+		},
+		{
+			name: "south",
+			texture: "$south",
+			cullFace: "south",
+			uvLock: true,
+			verts: [
+				{ pos: [ 0, 0.5, 1 ], uv: [ 0, 0.5 ] },
+				{ pos: [ 0, 0, 1 ], uv: [ 0, 1 ] },
+				{ pos: [ 1, 0.5, 1 ], uv: [ 1, 0.5 ] },
+				{ pos: [ 1, 0, 1 ], uv: [ 1, 1 ] },
+			],
+		},
+		{
+			name: "west",
+			texture: "$west",
+			cullFace: "west",
+			uvLock: true,
+			verts: [
+				{ pos: [ 0, 0.5, 0 ], uv: [ 0, 0.5 ] },
+				{ pos: [ 0, 0, 0 ], uv: [ 0, 1 ] },
+				{ pos: [ 0, 0.5, 1 ], uv: [ 1, 0.5 ] },
+				{ pos: [ 0, 0, 1 ], uv: [ 1, 1 ] },
+			],
+		},
+		{
+			name: "east",
+			texture: "$east",
+			cullFace: "east",
+			uvLock: true,
+			verts: [
+				{ pos: [ 1, 0.5, 1 ], uv: [ 0, 0.5 ] },
+				{ pos: [ 1, 0, 1 ], uv: [ 0, 1 ] },
+				{ pos: [ 1, 0.5, 0 ], uv: [ 1, 0.5 ] },
+				{ pos: [ 1, 0, 0 ], uv: [ 1, 1 ] },
+			],
+		},
+	]
+}

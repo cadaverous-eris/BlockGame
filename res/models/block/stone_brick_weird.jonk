@@ -1,0 +1,77 @@
+{
+	parent: "block/cube_all",
+	textures: {
+		particle: "blocks/stone_brick",
+		z: "blocks/stone_brick",
+		x: "blocks/stone_brick_x",
+		y: "blocks/stone_brick_y",
+	},
+	quads: [
+		{
+			name: "bottom",
+			texture: "$y",
+			cullFace: "down",
+			verts: [
+				{ pos: [ 0, 0, 1 ], uv: [ 0, 0 ] },
+				{ pos: [ 0, 0, 0 ], uv: [ 1, 0 ] },
+				{ pos: [ 1, 0, 1 ], uv: [ 0, 1 ] },
+				{ pos: [ 1, 0, 0 ], uv: [ 1, 1 ] },
+			],
+		},
+		{
+			name: "top",
+			texture: "$y",
+			cullFace: "up",
+			verts: [
+				{ pos: [ 0, 1, 0 ], uv: [ 0, 0 ] },
+				{ pos: [ 0, 1, 1 ], uv: [ 0, 1 ] },
+				{ pos: [ 1, 1, 0 ], uv: [ 1, 0 ] },
+				{ pos: [ 1, 1, 1 ], uv: [ 1, 1 ] },
+			],
+		},
+		{
+			name: "north",
+			texture: "$z",
+			cullFace: "north",
+			verts: [
+				{ pos: [ 1, 1, 0 ], uv: [ 0, 0 ] },
+				{ pos: [ 1, 0, 0 ], uv: [ 0, 1 ] },
+				{ pos: [ 0, 1, 0 ], uv: [ 1, 0 ] },
+				{ pos: [ 0, 0, 0 ], uv: [ 1, 1 ] },
+			],
+		},
+		{
+			name: "south",
+			texture: "$z",
+			cullFace: "south",
+			verts: [
+				{ pos: [ 0, 1, 1 ], uv: [ 0, 0 ] },
+				{ pos: [ 0, 0, 1 ], uv: [ 0, 1 ] },
+				{ pos: [ 1, 1, 1 ], uv: [ 1, 0 ] },
+				{ pos: [ 1, 0, 1 ], uv: [ 1, 1 ] },
+			],
+		},
+		{
+			name: "west",
+			texture: "$x",
+			cullFace: "west",
+			verts: [
+				{ pos: [ 0, 1, 0 ], uv: [ 0, 0 ] },
+				{ pos: [ 0, 0, 0 ], uv: [ 0, 1 ] },
+				{ pos: [ 0, 1, 1 ], uv: [ 1, 0 ] },
+				{ pos: [ 0, 0, 1 ], uv: [ 1, 1 ] },
+			],
+		},
+		{
+			name: "east",
+			texture: "$x",
+			cullFace: "east",
+			verts: [
+				{ pos: [ 1, 1, 1 ], uv: [ 0, 0 ] },
+				{ pos: [ 1, 0, 1 ], uv: [ 0, 1 ] },
+				{ pos: [ 1, 1, 0 ], uv: [ 1, 0 ] },
+				{ pos: [ 1, 0, 0 ], uv: [ 1, 1 ] },
+			],
+		},
+	],
+}
