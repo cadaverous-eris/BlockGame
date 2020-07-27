@@ -64,6 +64,8 @@ namespace eng {
 	}
 
 	Game::~Game() {
+		ResourceManager::destroyInstance();
+
 		try {
 			std::cout << "shutdown" << std::endl;
 		} catch (...) {}

@@ -29,6 +29,10 @@ namespace eng {
 			if (!resourceManagerInstance)
 				resourceManagerInstance = std::unique_ptr<ResourceManager>(new ResourceManager(game));
 		}
+		inline static void destroyInstance() {
+			if (resourceManagerInstance)
+				resourceManagerInstance = nullptr;
+		}
 
 		void loadResources();
 
