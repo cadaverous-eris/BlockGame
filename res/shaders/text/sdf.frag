@@ -35,6 +35,7 @@ float sample(vec2 uv) {
 vec4 getColor(vec2 uv, vec4 color) {
 	float t = sample(uv);
 	float edgeFactor = smoothstep(edgeVal - softness, edgeVal, t);
+	gl_FragDepth = gl_FragCoord.z;
 	return vec4(color.rgb, color.a * edgeFactor);
 }
 vec4 getColor(vec2 uv, vec4 color, vec4 outlineColor) {
