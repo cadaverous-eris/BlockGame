@@ -1,0 +1,39 @@
+Jonk is a data format similar to json, but with a few improvements:
+- trailing commas are allowed
+- quotes around object keys are optional, unless the key includes whitespace, quotes, or escape characters
+- strings can be quoted with ", ', or `
+- strings can span multiple lines
+	- strings quoted with " or ' will ignore line breaks and all whitespace directly following a line break
+	- strings quoted with ` won't ignore line breaks or leading whitespace on new lines
+- extra escape sequences for strings
+	\"					"					(0x22)
+	\'					'					(0x27)
+	\`					`					(0x60)
+	\\					\					(0x5c)
+	\/					/					(0x2f)
+	\a					audible bell		(0x07)
+	\b					backspace			(0x08)
+	\t					horizontal tab		(0x09)
+	\n 					newline				(0x0a)
+	\v					vertical tab		(0x0b)
+	\f					form feed			(0x0c)
+	\r					carriage return		(0x0d)
+	\###				octal byte (max 3 octal digits, or terminate at the first character that is not a valid octal digit)
+	\x##, \X##			hex byte
+	\u####				unicode codepoint U+####
+	\U########			unicode codepoint U+########
+- NaN and +/- Infinity are valid numbers
+- underscores can be inserted between digits in numeric literals as separators
+- octal number literals, using prefix 0O or 0o
+- hexadecimal number literals, using prefix 0X or 0x
+
+
+Types:
+- null
+- object
+- array
+- string
+- int (64 bits)
+- uint (64 bits) (hex or octal formatted numbers are unsigned, unless prefixed by + or -)
+- floating point (64 bits) (can be NaN or +/-Infinity, supports e notation)
+- boolean

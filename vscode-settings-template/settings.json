@@ -1,6 +1,7 @@
 {
     "editor.suggestSelection": "first",
     "editor.detectIndentation": true,
+    "editor.suggest.insertMode": "replace",
     "cmake.debugConfig": {
         "cwd": "${workspaceFolder}/run",
         "preLaunchTask": "Setup Run Folder"
