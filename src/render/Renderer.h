@@ -153,7 +153,7 @@ namespace eng {
 		// called after the gl context has been created
 		void init();
 
-		static inline void clear(ClearBit clearBits) noexcept { glClear(static_cast<std::underlying_type_t<ClearBit>>(clearBits)); }
+		static inline void clear(ClearBit clearBits) noexcept { glClear(to_underlying(clearBits)); }
 
 		static inline void clearColor(const Color& color) noexcept { glClearColor(color.r / 255.0f, color.g / 255.0f, color.b / 255.0f, color.a / 255.0f); }
 
