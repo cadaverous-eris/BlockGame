@@ -57,6 +57,10 @@ namespace eng {
 		bool isMinimized() const;
 		bool isMaximized() const;
 
+		bool hasFocus() const;
+
+		void requestAttention() const;
+
 		void swapBuffers() const;
 
 		GLFWwindow* getHandle() const { return handle; } // TODO: remove

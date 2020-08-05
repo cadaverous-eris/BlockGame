@@ -53,9 +53,8 @@ namespace eng {
 		};*/
 
 		// print the gl version for debugging
-		std::cout << glGetString(GL_VERSION) << std::endl;
-
-		std::cout << glGetString(GL_RENDERER) << std::endl;
+		std::cout << glGetString(GL_VERSION) << '\n';
+		std::cout << glGetString(GL_RENDERER) << '\n';
 
 		// Camera setup
 		const auto terrainHeight = world.getTerrainHeight(0, 0);
@@ -64,6 +63,10 @@ namespace eng {
 
 		game->inputManager.setCursorMode(input::CursorMode::DISABLED);
 		game->inputManager.input();
+
+		//game->window.requestAttention();
+		if (!game->window.hasFocus()) // Disable mouse capture if the window is not focused
+			game->inputManager.setCursorMode(input::CursorMode::NORMAL);
 	}
 
 	/*

@@ -104,7 +104,6 @@ namespace eng {
 	bool Window::isVSync() const {
 		return vSync;
 	}
-
 	void Window::setVSync(bool vSync) const {
 		Window::vSync = vSync;
 		glfwSwapInterval(vSync ? 1 : 0);
@@ -138,21 +137,25 @@ namespace eng {
 	void Window::minimize() const {
 		glfwIconifyWindow(handle);
 	}
-
 	void Window::maximize() const {
 		glfwMaximizeWindow(handle);
 	}
-
 	void Window::restore() const {
 		glfwRestoreWindow(handle);
 	}
-
 	bool Window::isMinimized() const {
 		return glfwGetWindowAttrib(handle, GLFW_ICONIFIED);
 	}
-
 	bool Window::isMaximized() const {
 		return glfwGetWindowAttrib(handle, GLFW_MAXIMIZED);
+	}
+
+	bool Window::hasFocus() const {
+		return glfwGetWindowAttrib(handle, GLFW_FOCUSED);
+	}
+
+	void Window::requestAttention() const {
+		glfwRequestWindowAttention(handle);
 	}
 
 	void Window::swapBuffers() const {
