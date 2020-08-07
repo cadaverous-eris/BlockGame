@@ -28,6 +28,7 @@ namespace eng {
 		std::string(reinterpret_cast<const char*>(u8"Rustic: The Game™©®")),
 		std::string(reinterpret_cast<const char*>(u8"Rustic: The Game™©®")),
 		std::string(reinterpret_cast<const char*>(u8"Rustic: The Game™©®")),
+		"BlockSmith",
 		"Blockintosh Plus",
 		"Cube Land",
 		"Blockarina of Mine",

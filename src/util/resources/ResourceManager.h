@@ -18,6 +18,7 @@ namespace eng {
 		TextureAtlas blockTextures;
 		BlockModelManager blockModels;
 		// TODO: manage fonts
+		// TODO: manage shaders
 		// TODO: manage sounds
 
 		ResourceManager(Game& game);

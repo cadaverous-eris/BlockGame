@@ -2,6 +2,7 @@
 
 #include <array>
 #include <vector>
+#include <utility>
 #include <limits>
 #include <variant>
 #include <algorithm>
@@ -10,6 +11,7 @@
 
 #include "util/type_traits.h"
 #include "util/Color.h"
+#include "util/uuid.h"
 #include "util/direction.h"
 #include "util/text/text_utils.h"
 #include "render/world/RenderLayer.h"
@@ -145,6 +147,34 @@ namespace jonk {
 		}
 	};
 
+	// Jonk compat for std::pair<T, U>
+	template<typename T1, typename T2>
+	struct JonkTypeCompat<std::pair<T1, T2>> {
+		using Pair = std::pair<T1, T2>;
+		template<typename U1 = T1, typename U2 = T2, std::enable_if_t<((is_convertible_to_jonk_v<U1> || is_jonk_type_v<U1>) && (is_convertible_to_jonk_v<U2> || is_jonk_type_v<U2>)), int> = 0>
+		static Jonk toJonk(const Pair& pair) {
+			return JonkArray { Jonk(pair.first), Jonk(pair.second) };
+		}
+		template<typename U1 = T1, typename U2 = T2, std::enable_if_t<((is_convertible_from_jonk_v<U1> || is_jonk_type_v<U1>) && (is_convertible_from_jonk_v<U2> || is_jonk_type_v<U2>)), int> = 0>
+		static Pair fromJonk(const Jonk& jonk) {
+			if (jonk.isArray()) {
+				const JonkArray& jArr = jonk.asArray();
+				if (jArr.size() == 2)
+					return Pair(jArr[0].get<T1>(), jArr[1].get<T2>());
+			}
+			throw bad_jonk_cast();
+		}
+		template<typename U1 = T1, typename U2 = T2, std::enable_if_t<((is_testable_jonk_type_v<U1> || is_jonk_type_v<U1>) && (is_testable_jonk_type_v<U2> || is_jonk_type_v<U2>)), int> = 0>
+		static bool jonkIs(const Jonk& jonk) noexcept {
+			if (!jonk.isArray())
+				return false;
+			const JonkArray& jArr = jonk.asArray();
+			if (jArr.size() != 2)
+				return false;
+			return jArr[0].is<T1>() && jArr[1].is<T2>();
+		}
+	};
+
 	// Jonk compat for glm::vec types
 	template<glm::length_t L, typename V, glm::qualifier Q>
 	struct JonkTypeCompat<glm::vec<L, V, Q>> {
@@ -162,7 +192,7 @@ namespace jonk {
 				const JonkArray& arr = jonk.asArray();
 				if (arr.size() == eng::glm_type<T>::components) {
 					T vec {};
-					for (size_t i = 0; i < vec.length(); i++) {
+					for (auto i = 0; i < vec.length(); i++) {
 						const Jonk& j = arr[i];
 						if constexpr (is_value_t_bool) {
 							if (j.isBool()) {
@@ -334,6 +364,31 @@ namespace jonk {
 				return Color::isValidColorString(jonk.asString());
 			}
 			return isValidColorUint(jonk);
+		}
+	};
+
+	// Jonk compat for eng::uuid
+	template<>
+	struct JonkTypeCompat<eng::uuid> {
+		using uuid = eng::uuid;
+		using UintPair = std::pair<uint64_t, uint64_t>;
+		inline static Jonk toJonk(const uuid& id) {
+			return Jonk(id.toString());
+		}
+		static uuid fromJonk(const Jonk& jonk) {
+			if (jonk.isString()) {
+				const auto parseResult = uuid::fromString(jonk.asString());
+				if (parseResult) return *parseResult;
+			} else if (jonk.is<UintPair>()) {
+				return uuid::fromUints(jonk.get<UintPair>());
+			}
+			throw bad_jonk_cast();
+		}
+		static bool jonkIs(const Jonk& jonk) noexcept {
+			if (jonk.isString()) {
+				return uuid::fromString(jonk.asString()).has_value();
+			}
+			return jonk.is<UintPair>();
 		}
 	};
 
