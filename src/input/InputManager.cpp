@@ -90,11 +90,11 @@ namespace eng::input {
 
 	// INPUT CALLBACKS
 
-	void key_callback(GLFWwindow* windowPtr, int32_t keyCode, int32_t scancode, int32_t actionInt, int32_t modsInt) {
+	void key_callback(GLFWwindow*, int32_t keyCode, int32_t scancode, int32_t actionInt, int32_t modsInt) {
 		//const Window* window = (const Window*) glfwGetWindowUserPointer(windowPtr);
 		KeyAction action = static_cast<KeyAction>(actionInt);
 		KeyType keyType = (keyCode == static_cast<int>(Keys::KEY_UNKNOWN)) ? KeyType::KEY_SCANCODE : KeyType::KEY_NAMED;
-		ModifierBits modifiers(modsInt);
+		ModifierBits modifiers(static_cast<uint8_t>(modsInt));
 		Key key(keyType, (keyType == KeyType::KEY_NAMED) ? keyCode : scancode);
 		KeyInput keyInput{ key, modifiers };
 
@@ -119,7 +119,7 @@ namespace eng::input {
 		}
 	}
 
-	void mouse_button_callback(GLFWwindow* windowPtr, int32_t button, int32_t actionInt, int32_t modsInt) {
+	void mouse_button_callback(GLFWwindow*, int32_t button, int32_t actionInt, int32_t modsInt) {
 		ModifierBits modifiers(modsInt);
 		KeyAction action = static_cast<KeyAction>(actionInt);
 		Key key(KeyType::MOUSE, button);
@@ -145,12 +145,12 @@ namespace eng::input {
 		}
 	}
 
-	void scroll_callback(GLFWwindow* windowPtr, double xOffset, double yOffset) {
-		const Window* window = static_cast<Window*>(glfwGetWindowUserPointer(windowPtr));
+	void scroll_callback(GLFWwindow* windowHandle, double xOffset, double yOffset) {
+		const Window* window = Window::fromWindowHandle(windowHandle);
 		window->game->inputManager.mouseScrollOffset += glm::dvec2(xOffset, yOffset);
 	}
 
-	void text_input_callback(GLFWwindow* windowPtr, uint32_t codePoint) {
+	void text_input_callback(GLFWwindow* windowHandle, uint32_t codePoint) {
 		// TODO: implement
 	}
 

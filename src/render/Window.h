@@ -34,6 +34,8 @@ namespace eng {
 		Window& operator =(const Window&) = delete;
 		Window& operator =(Window&&) = delete;
 
+		static Window* fromWindowHandle(GLFWwindow* windowHandle);
+
 		// returns the width of the window's frame buffer
 		int getWidth() const;
 		// returns the height of the window's frame buffer
@@ -56,6 +58,10 @@ namespace eng {
 		void restore() const;
 		bool isMinimized() const;
 		bool isMaximized() const;
+
+		void hide() const;
+		void show() const;
+		bool isVisible() const;
 
 		bool hasFocus() const;
 

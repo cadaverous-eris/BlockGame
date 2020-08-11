@@ -197,5 +197,18 @@ namespace eng {
 	void Game::rendererResize(size_t width, size_t height) {
 		doGameStateRendererResize(currentGameState, width, height);
 	}
+	void Game::rendererRescale(float scaleX, float scaleY) {
+		doGameStateRendererRescale(currentGameState, scaleX, scaleY);
+	}
+
+	void Game::windowMaximizeCallback(bool maximized) {
+		doGameStateWindowMaximizeCallback(currentGameState, maximized);
+	}
+	void Game::windowMinimizeCallback(bool minimized) {
+		doGameStateWindowMinimizeCallback(currentGameState, minimized);
+	}
+	void Game::windowFocusCallback(bool focused) {
+		doGameStateWindowFocusCallback(currentGameState, focused);
+	}
 
 }

@@ -24,7 +24,12 @@ namespace eng {
 		//void input() {}
 		//void update() {}
 		//void render(float partialTicks) {}
+
 		//void rendererResize(size_t width, size_t height) {}
+		//void rendererRescale(float scaleX, float scaleY) {}
+		//void windowMaximizeCallback(bool maximized) {}
+		//void windowMinimizeCallback(bool minimized) {}
+		//void windowFocusCallback(bool focused) {}
 
 		Game* getGame() { return game; }
 		const Game* getGame() const { return game; }

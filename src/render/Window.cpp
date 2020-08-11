@@ -16,6 +16,9 @@ namespace eng {
 		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 		glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 		glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
+#ifndef NDEBUG
+		glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE); // create a debug opengl context for debug builds
+#endif
 		glfwWindowHint(GLFW_DOUBLEBUFFER, GLFW_TRUE);
 		glfwWindowHint(GLFW_SCALE_TO_MONITOR, GLFW_TRUE); // resize the window automatically when moved between monitors with different content scales
 		//glfwWindowHint(GLFW_SAMPLES, 4);
@@ -38,26 +41,34 @@ namespace eng {
 
 		/*glfwSetWindowRefreshCallback(handle, [](GLFWwindow* windowHandle) {
 			Window* const thisWindow = (Window* const) glfwGetWindowUserPointer(windowHandle);
-			// TODO: redraw
+			// TODO: redraw?
 			//thisWindow->swapBuffers();
 		});*/
-		glfwSetFramebufferSizeCallback(handle, [](GLFWwindow* windowHandle, int width, int height) {
+		glfwSetFramebufferSizeCallback(handle, [](GLFWwindow*, int width, int height) {
 			Game::instance().renderer.handleWindowResize(width, height);
 			Game::instance().rendererResize(static_cast<size_t>(width), static_cast<size_t>(height));
 		});
-		glfwSetWindowContentScaleCallback(handle, [](GLFWwindow* windowHandle, float scaleX, float scaleY) {
+		glfwSetWindowContentScaleCallback(handle, [](GLFWwindow*, float scaleX, float scaleY) {
 			Game::instance().renderer.handleWindowRescale(scaleX, scaleY);
-			// TODO: add a GameState method for handling window rescale???
+			Game::instance().rendererRescale(scaleX, scaleY);
 		});
-		// callback to update window size when window is minimized/maximized
-		auto maximizeIconifyCallback = [](GLFWwindow* windowHandle, int) {
-			Window* const thisWindow = (Window* const) glfwGetWindowUserPointer(windowHandle);
+		glfwSetWindowMaximizeCallback(handle, [](GLFWwindow* windowHandle, int maximized) {
+			Window* const thisWindow = fromWindowHandle(windowHandle);
 			const auto size = thisWindow->getSize();
 			const auto scale = thisWindow->getContentScale();
 			Game::instance().renderer.handleWindowResize(size.x, size.y, scale.x, scale.y);
-		};
-		glfwSetWindowMaximizeCallback(handle, maximizeIconifyCallback);
-		glfwSetWindowIconifyCallback(handle, maximizeIconifyCallback);
+			Game::instance().windowMaximizeCallback(static_cast<bool>(maximized));
+		});
+		glfwSetWindowIconifyCallback(handle, [](GLFWwindow* windowHandle, int minimized) {
+			Window* const thisWindow = fromWindowHandle(windowHandle);
+			const auto size = thisWindow->getSize();
+			const auto scale = thisWindow->getContentScale();
+			Game::instance().renderer.handleWindowResize(size.x, size.y, scale.x, scale.y);
+			Game::instance().windowMinimizeCallback(static_cast<bool>(minimized));
+		});
+		glfwSetWindowFocusCallback(handle, [](GLFWwindow*, int focused) {
+			Game::instance().windowFocusCallback(static_cast<bool>(focused));
+		});
 
 		// set window icon (not the icon shown in the task bar/dock)
 		/*try {
@@ -78,6 +89,10 @@ namespace eng {
 
 	Window::Window(Window&& b) :
 			handle(std::exchange(b.handle, nullptr)), game(b.game) {}
+
+	Window* Window::fromWindowHandle(GLFWwindow* windowHandle) {
+		return static_cast<Window*>(glfwGetWindowUserPointer(windowHandle));
+	}
 
 	int Window::getWidth() const {
 		int w;
@@ -128,7 +143,7 @@ namespace eng {
 					}
 				);
 			}
-			glfwSetWindowIcon(handle, icons.size(), icons.data());
+			glfwSetWindowIcon(handle, static_cast<int>(icons.size()), icons.data());
 		} else {
 			glfwSetWindowIcon(handle, 0, nullptr);
 		}
@@ -149,6 +164,17 @@ namespace eng {
 	bool Window::isMaximized() const {
 		return glfwGetWindowAttrib(handle, GLFW_MAXIMIZED);
 	}
+
+	void Window::hide() const {
+		glfwHideWindow(handle);
+	}
+	void Window::show() const {
+		glfwShowWindow(handle);
+	}
+	bool Window::isVisible() const {
+		return glfwGetWindowAttrib(handle, GLFW_VISIBLE);
+	}
+
 
 	bool Window::hasFocus() const {
 		return glfwGetWindowAttrib(handle, GLFW_FOCUSED);

@@ -23,7 +23,36 @@ namespace eng {
 	void doGameStateRendererResize(GameStateVariant& gameStateVariant, size_t width, size_t height) {
 		std::visit([width, height](auto& gameState) {
 			using T = std::decay_t<decltype(gameState)>;
-			if constexpr (std::is_base_of_v<GameState, T>) gameState.rendererResize(width, height);
+			if constexpr (std::is_base_of_v<GameState, T> && requires (T gs, size_t w, size_t h) { gs.rendererResize(w, h); })
+				gameState.rendererResize(width, height);
+		}, gameStateVariant);
+	}
+	void doGameStateRendererRescale(GameStateVariant& gameStateVariant, float scaleX, float scaleY) {
+		std::visit([scaleX, scaleY](auto& gameState) {
+			using T = std::decay_t<decltype(gameState)>;
+			if constexpr (std::is_base_of_v<GameState, T> && requires (T gs, float sx, float sy) { gs.rendererRescale(sx, sy); })
+				gameState.rendererRescale(scaleX, scaleY);
+		}, gameStateVariant);
+	}
+	void doGameStateWindowMaximizeCallback(GameStateVariant& gameStateVariant, bool maximized) {
+		std::visit([maximized](auto& gameState) {
+			using T = std::decay_t<decltype(gameState)>;
+			if constexpr (std::is_base_of_v<GameState, T> && requires (T gs, bool m) { gs.windowMaximizeCallback(m); })
+				gameState.windowMaximizeCallback(maximized);
+		}, gameStateVariant);
+	}
+	void doGameStateWindowMinimizeCallback(GameStateVariant& gameStateVariant, bool minimized) {
+		std::visit([minimized](auto& gameState) {
+			using T = std::decay_t<decltype(gameState)>;
+			if constexpr (std::is_base_of_v<GameState, T> && requires (T gs, bool m) { gs.windowMinimizeCallback(m); })
+				gameState.windowMinimizeCallback(minimized);
+		}, gameStateVariant);
+	}
+	void doGameStateWindowFocusCallback(GameStateVariant& gameStateVariant, bool focused) {
+		std::visit([focused](auto& gameState) {
+			using T = std::decay_t<decltype(gameState)>;
+			if constexpr (std::is_base_of_v<GameState, T> && requires (T gs, bool m) { gs.windowFocusCallback(m); })
+				gameState.windowFocusCallback(focused);
 		}, gameStateVariant);
 	}
 

@@ -57,6 +57,10 @@ namespace eng {
 	void doGameStateInput(GameStateVariant&);
 	void doGameStateRender(GameStateVariant&, const float partialTicks);
 	void doGameStateRendererResize(GameStateVariant&, size_t width, size_t height);
+	void doGameStateRendererRescale(GameStateVariant&, float scaleX, float scaleY);
+	void doGameStateWindowMaximizeCallback(GameStateVariant&, bool maximized);
+	void doGameStateWindowMinimizeCallback(GameStateVariant&, bool minimized);
+	void doGameStateWindowFocusCallback(GameStateVariant&, bool focused);
 
 
 	void setGameStateFromInitializer(GameStateVariant&, GameStateInitializerVariant&);

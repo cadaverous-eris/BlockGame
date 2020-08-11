@@ -94,6 +94,12 @@ namespace eng {
 
 		// called when the window size changes so that the current GameState can react to the change
 		void rendererResize(size_t width, size_t height);
+		// called when the window scale changes so that the current GameState can react to the change
+		void rendererRescale(float scaleX, float scaleY);
+
+		void windowMaximizeCallback(bool maximized);
+		void windowMinimizeCallback(bool minimized);
+		void windowFocusCallback(bool focused);
 
 		inline int getFPS() const noexcept { return fps; }
 		inline int getAvgFPS() const noexcept { return avgFPS; }

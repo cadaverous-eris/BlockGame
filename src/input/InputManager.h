@@ -14,32 +14,25 @@ namespace eng::input {
 		DISABLED = GLFW_CURSOR_DISABLED,
 		HIDDEN   = GLFW_CURSOR_HIDDEN,
 	};
-	
+
 	void key_callback(GLFWwindow*, int32_t, int32_t, int32_t, int32_t);
 	void mouse_button_callback(GLFWwindow*, int32_t, int32_t, int32_t);
 	void scroll_callback(GLFWwindow*, double, double);
-	void text_input_callback(GLFWwindow* windowPtr, uint32_t codePoint); // codePoint is native endian UTF-32
-	//void cursor_pos_callback(GLFWwindow* windowPtr, double x, double y); // unused
-	//void cursor_enter_callback(GLFWwindow* window, int entered); // entered == 1 when entering, 0 when leaving // unused
+	void text_input_callback(GLFWwindow*, uint32_t codePoint); // codePoint is native endian UTF-32
+	//void cursor_pos_callback(GLFWwindow*, double x, double y); // unused
+	//void cursor_enter_callback(GLFWwindow*, int entered); // entered == 1 when entering, 0 when leaving // unused
 
 	class InputManager {
 		friend void key_callback(GLFWwindow*, int32_t, int32_t, int32_t, int32_t);
 		friend void mouse_button_callback(GLFWwindow*, int32_t, int32_t, int32_t);
 		friend void scroll_callback(GLFWwindow*, double, double);
-		friend void text_input_callback(GLFWwindow* windowPtr, uint32_t codePoint);
+		friend void text_input_callback(GLFWwindow*, uint32_t codePoint);
 	private:
-		Window* const window;
+		Window* window;
 
 		CursorMode prevCursorMode;
 		glm::dvec2 cursorPos, prevCursorPos;
 		glm::dvec2 mouseScrollOffset;
-		
-
-	public:
-		
-
-	private:
-
 
 	public: // public methods
 		explicit InputManager(Window* window);
