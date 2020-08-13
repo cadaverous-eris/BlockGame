@@ -4,7 +4,9 @@
 #include <type_traits>
 #include <limits>
 #include <cmath>
+#include <cstring>
 #include <algorithm>
+#include <bit>
 #ifdef _MSC_VER
 #include <intrin.h>
 #endif
@@ -17,6 +19,13 @@
 #include <glm/ext/scalar_relational.hpp>
 
 namespace eng {
+
+	template<size_t S> struct sized_uint_type;
+	template<> struct sized_uint_type<1> { using type = uint8_t; static_assert(sizeof(type) == 1); };
+	template<> struct sized_uint_type<2> { using type = uint16_t; static_assert(sizeof(type) == 2); };
+	template<> struct sized_uint_type<4> { using type = uint32_t; static_assert(sizeof(type) == 4); };
+	template<> struct sized_uint_type<8> { using type = uint64_t; static_assert(sizeof(type) == 8); };
+	template<size_t S> using sized_uint_t = typename sized_uint_type<S>::type;
 
 	namespace math {
 
@@ -154,7 +163,7 @@ namespace eng {
 	constexpr bool epsEqual(const T a, const T b) {
 		return glm::equal(a, b, math::epsilon<T>);
 	}
-	template<glm::length_t L, typename T, glm::qualifier Q, typename std::enable_if_t<std::is_floating_point_v<T>> * = nullptr>
+	template<glm::length_t L, typename T, glm::qualifier Q, typename std::enable_if_t<std::is_floating_point_v<T>>* = nullptr>
 	constexpr bool epsEqual(const glm::vec<L, T, Q>& a, const glm::vec<L, T, Q>& b) {
 		return glm::all(glm::equal(a, b, math::epsilon<T>));
 	}
@@ -162,7 +171,7 @@ namespace eng {
 	constexpr bool epsNotEqual(const T a, const T b) {
 		return glm::notEqual(a, b, math::epsilon<T>);
 	}
-	template<glm::length_t L, typename T, glm::qualifier Q, typename std::enable_if_t<std::is_floating_point_v<T>> * = nullptr>
+	template<glm::length_t L, typename T, glm::qualifier Q, typename std::enable_if_t<std::is_floating_point_v<T>>* = nullptr>
 	constexpr bool epsNotEqual(const glm::vec<L, T, Q>& a, const glm::vec<L, T, Q>& b) {
 		return glm::any(glm::notEqual(a, b, math::epsilon<T>));
 	}
@@ -171,7 +180,7 @@ namespace eng {
 	constexpr bool epsZero(const T a) {
 		return glm::equal(a, T { 0 }, math::epsilon<T>);
 	}
-	template<glm::length_t L, typename T, glm::qualifier Q, typename std::enable_if_t<std::is_floating_point_v<T>> * = nullptr>
+	template<glm::length_t L, typename T, glm::qualifier Q, typename std::enable_if_t<std::is_floating_point_v<T>>* = nullptr>
 	constexpr bool epsZero(const glm::vec<L, T, Q>& a) {
 		return glm::all(glm::equal(a, glm::vec<L, T, Q>{0}, math::epsilon<T>));
 	}
@@ -179,13 +188,13 @@ namespace eng {
 	constexpr bool epsNonzero(const T a) {
 		return glm::notEqual(a, T { 0 }, math::epsilon<T>);
 	}
-	template<glm::length_t L, typename T, glm::qualifier Q, typename std::enable_if_t<std::is_floating_point_v<T>> * = nullptr>
+	template<glm::length_t L, typename T, glm::qualifier Q, typename std::enable_if_t<std::is_floating_point_v<T>>* = nullptr>
 	constexpr bool epsNonzero(const glm::vec<L, T, Q>& a) {
 		return glm::any(glm::notEqual(a, glm::vec<L, T, Q>{0}, math::epsilon<T>));
 	}
 
-	template<typename T, std::enable_if_t<(std::is_integral_v<T>&& std::is_unsigned_v<T> && !std::is_same_v<bool, T> && ((sizeof(T) == 2) || (sizeof(T) == 4) || (sizeof(T) == 8))), int> = 0>
-	constexpr T flipBytes(const T& i) noexcept {
+	template<typename T, std::enable_if_t<(std::is_integral_v<T> && std::is_unsigned_v<T> && !std::is_same_v<bool, T> && ((sizeof(T) == 2) || (sizeof(T) == 4) || (sizeof(T) == 8))), int> = 0>
+	inline constexpr T flipBytes(const T& i) noexcept {
 		if constexpr (sizeof(T) == 2) {
 #if defined(_MSC_VER)
 			return _byteswap_ushort(i);
@@ -220,6 +229,38 @@ namespace eng {
 					((i & 0x00FF000000000000ull) >> 40) |
 					((i & 0xFF00000000000000ull) >> 56));
 #endif
+		}
+	}
+
+	template<typename T, size_t S = sizeof(T), typename Uint = sized_uint_t<S>, std::enable_if_t<((std::is_integral_v<T> || std::is_floating_point_v<T>) && !std::is_same_v<bool, T>), int> = 0>
+	constexpr Uint toUnsignedIntBytes(const T& t) noexcept {
+		Uint b;
+		std::memcpy(&b, &t, S); // use std::memcpy to avoid undefined behavior
+		return b;
+	}
+	template<typename T, size_t S = sizeof(T), typename Uint = sized_uint_t<S>, std::enable_if_t<((std::is_integral_v<T> || std::is_floating_point_v<T>) && !std::is_same_v<bool, T>), int> = 0>
+	constexpr T fromUnsignedIntBytes(const Uint& b) noexcept {
+		T t;
+		std::memcpy(&t, &b, S); // use std::memcpy to avoid undefined behavior
+		return t;
+	}
+
+	template<typename T, size_t S = sizeof(T), typename Uint = sized_uint_t<S>, std::enable_if_t<((std::is_integral_v<T> || std::is_floating_point_v<T>) && !std::is_same_v<bool, T>), int> = 0>
+	constexpr Uint toBigEndianUintBytes(const T& t) noexcept {
+		static_assert((std::endian::native == std::endian::big) || (std::endian::native == std::endian::little));
+		if constexpr ((std::endian::native == std::endian::big) || (S == 1)) {
+			return toUnsignedIntBytes(t);
+		} else {
+			return flipBytes(toUnsignedIntBytes(t));
+		}
+	}
+	template<typename T, size_t S = sizeof(T), typename Uint = sized_uint_t<S>, std::enable_if_t<((std::is_integral_v<T> || std::is_floating_point_v<T>) && !std::is_same_v<bool, T>), int> = 0>
+	constexpr T fromBigEndianUintBytes(const Uint& b) noexcept {
+		static_assert((std::endian::native == std::endian::big) || (std::endian::native == std::endian::little));
+		if constexpr ((std::endian::native == std::endian::big) || (S == 1)) {
+			return fromUnsignedIntBytes(b);
+		} else {
+			return fromUnsignedIntBytes(flipBytes(b));
 		}
 	}
 
