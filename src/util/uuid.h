@@ -55,11 +55,11 @@ namespace eng {
 				} else {
 					uint64_t digitVal {};
 					if ((c >= '0') && (c <= '9')) {
-						digitVal = c - '0';
+						digitVal = static_cast<uint64_t>(c - '0');
 					} else if ((c >= 'A') && (c <= 'F')) {
-						digitVal = 10 + (c - 'A');
+						digitVal = static_cast<uint64_t>(10 + (c - 'A'));
 					} else if ((c >= 'a') && (c <= 'f')) {
-						digitVal = 10 + (c - 'a');
+						digitVal = static_cast<uint64_t>(10 + (c - 'a'));
 					} else {
 						return std::nullopt;
 					}

@@ -68,7 +68,7 @@ namespace jonk {
 		data = b;
 		return *this;
 	}
-	
+
 	bool Jonk::is(const JonkType jonkType) const noexcept {
 		switch (jonkType) {
 		case JonkType::Null: return isNull();
@@ -274,9 +274,9 @@ namespace jonk {
 
 	static std::string stringifyJonkArray(const JonkArray& arr, const size_t indentAmount, const char indentChar, const size_t indentLevel) {
 		const auto innerIndentLevel = indentLevel + 1;
-		const bool shouldInline = (arr.size() <= 4) && std::all_of(arr.begin(), arr.end(), [](const Jonk& j) noexcept {
+		const bool shouldInline = ((arr.size() <= 4) && std::all_of(arr.begin(), arr.end(), [](const Jonk& j) noexcept {
 			return j.isNull() || j.isBool() || j.isNumber();
-		});
+		})) || !indentAmount;
 
 		std::ostringstream sstr;
 		sstr.put('[');

@@ -173,37 +173,26 @@ namespace eng {
 	std::ostream& operator <<(std::ostream& os, const GLExtension& c) {
 		switch (c) {
 		case GLExtension::AMD_draw_buffers_blend:
-			os << "GL_AMD_draw_buffers_blend";
-			break;
+			return os << "GL_AMD_draw_buffers_blend";
 		case GLExtension::ARB_conservative_depth:
-			os << "GL_ARB_conservative_depth";
-			break;
+			return os << "GL_ARB_conservative_depth";
 		case GLExtension::ARB_draw_buffers_blend:
-			os << "GL_ARB_draw_buffers_blend";
-			break;
+			return os << "GL_ARB_draw_buffers_blend";
 		case GLExtension::ARB_internalformat_query:
-			os << "GL_ARB_internalformat_query";
-			break;
+			return os << "GL_ARB_internalformat_query";
 		case GLExtension::ARB_separate_shader_objects:
-			os << "GL_ARB_separate_shader_objects";
-			break;
+			return os << "GL_ARB_separate_shader_objects";
 		case GLExtension::ARB_shading_language_include:
-			os << "GL_ARB_shading_language_include";
-			break;
+			return os << "GL_ARB_shading_language_include";
 		case GLExtension::ARB_texture_filter_anisotropic:
-			os << "GL_ARB_texture_filter_anisotropic";
-			break;
+			return os << "GL_ARB_texture_filter_anisotropic";
 		case GLExtension::ARB_texture_storage:
-			os << "GL_ARB_texture_storage";
-			break;
+			return os << "GL_ARB_texture_storage";
 		case GLExtension::EXT_texture_filter_anisotropic:
-			os << "GL_EXT_texture_filter_anisotropic";
-			break;
+			return os << "GL_EXT_texture_filter_anisotropic";
 		default:
-			os << "unknown_extension";
-			break;
+			return os << "unknown_extension";
 		}
-		return os;
 	}
 
 }

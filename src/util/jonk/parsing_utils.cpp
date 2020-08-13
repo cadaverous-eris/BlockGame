@@ -269,17 +269,17 @@ namespace jonk::parsing {
 			isNegative = true;
 			pos++;
 		}
-		if (pos >= endIndex)
+		if (hasSign && (pos >= endIndex))
 			throw ParseError(str, pos, "Invalid number literal");
 		std::string_view valString = str.substr(pos, endIndex - pos);
 
-		if (valString == nan_string) {
-			pos = endIndex;
+		if (valString.starts_with(nan_string)) {
+			pos += nan_string.length();
 			JonkFloat value = std::numeric_limits<JonkFloat>::quiet_NaN();
 			return isNegative ? -value : value;
 		}
-		if (valString == infinity_string) {
-			pos = endIndex;
+		if (valString.starts_with(infinity_string)) {
+			pos += infinity_string.length();
 			JonkFloat value = std::numeric_limits<JonkFloat>::infinity();
 			return isNegative ? -value : value;
 		}
@@ -563,7 +563,10 @@ namespace jonk::parsing {
 					parserState = ParserState::Comma;
 					continue;
 				}
-				if (currentChar == '+' || currentChar == '-' || (currentChar >= '0' && currentChar <= '9')) {
+				if ((currentChar == '+') || (currentChar == '-') ||
+					((currentChar >= '0') && (currentChar <= '9')) ||
+					(currentChar == nan_string[0]) || (currentChar == infinity_string[0])
+				) {
 					const auto parsedNumber = parseNumber(str, pos);
 					if (std::holds_alternative<JonkInt>(parsedNumber)) {
 						jonkStack.top().get().emplace<JonkInt>(std::get<JonkInt>(parsedNumber));

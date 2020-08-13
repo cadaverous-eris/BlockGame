@@ -103,10 +103,21 @@
         "stop_token": "cpp",
         "charconv": "cpp"
     },
+
+    "clangd.arguments": [ "-log=verbose", "-pretty", "--background-index", "-header-insertion=never", "--compile-commands-dir=${workspaceFolder}/build/" ],
+
+    //"ccls.cache.directory": "${env:HOME}/.cache/ccls-cache",
+    //"ccls.cache.directory": "${env:TMPDIR}/.cache/ccls-cache",
+    //"ccls.cache.directory": "${env:TEMP}/.cache/ccls-cache",
+    "ccls.misc.compilationDatabaseDirectory": "build",
+    "ccls.clang.extraArgs": [
+        //"--target=x86_64-w64-windows-gnu",
+        "--stdlib=libstdc++"
+    ],
+    "ccls.codeLens.enabled": false,
+
     "C_Cpp.intelliSenseEngine": "Disabled",
     "C_Cpp.formatting": "Disabled",
     "C_Cpp.autocomplete": "Disabled",
-    "C_Cpp.errorSquiggles": "Disabled",
-
-    "clangd.arguments": [ "-log=verbose", "-pretty", "--background-index", "-header-insertion=never", "--compile-commands-dir=${workspaceFolder}/build/" ]
+    "C_Cpp.errorSquiggles": "Disabled"
 }

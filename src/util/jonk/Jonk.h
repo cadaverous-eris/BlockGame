@@ -39,7 +39,7 @@ namespace jonk {
 			JonkUint,
 			bool
 		>;
-		
+
 		variant_type data;
 
 	public:
@@ -105,8 +105,21 @@ namespace jonk {
 			if constexpr (jonkType == JonkType::Null) return std::holds_alternative<std::monostate>(data);
 			else return std::holds_alternative<jonk_type<jonkType>>(data);
 		}
-		template<typename T, std::enable_if_t<is_testable_jonk_type_v<T> || is_jonk_type_v<T>, int> = 0>
-		[[nodiscard]] bool is() const noexcept;
+		template<typename T, std::enable_if_t<(is_testable_jonk_type_v<T> || is_jonk_type_v<T>), int> = 0>
+		[[nodiscard]] inline bool is() const noexcept {
+			if constexpr (std::is_same_v<T, nullptr_t>)
+				return isNull();
+			else if constexpr (std::is_same_v<T, JonkObject>)
+				return is<JonkType::Object>();
+			else if constexpr (std::is_same_v<T, JonkArray>)
+				return is<JonkType::Array>();
+			else if constexpr (std::is_same_v<T, JonkString>)
+				return is<JonkType::String>();
+			else if constexpr (std::is_same_v<T, bool>)
+				return is<JonkType::Bool>();
+			else
+				return JonkTypeCompat<T>::jonkIs(*this);
+		}
 
 		[[nodiscard]] inline JonkType getJonkType() const noexcept {
 			return JonkType { data.index() };
@@ -170,8 +183,8 @@ namespace jonk {
 			else if constexpr (jonkType == JonkType::Uint) return getUint();
 			else if constexpr (jonkType == JonkType::Bool) return getBool();
 		}
-		template<typename T, std::enable_if_t<is_convertible_from_jonk_v<T> || is_jonk_type_v<T>, int> = 0>
-		[[nodiscard]] inline T get() const;
+		template<typename T>
+		[[nodiscard]] inline std::enable_if_t<is_convertible_from_jonk_v<T> || is_jonk_type_v<T>, T> get() const;
 
 		template<typename T, std::enable_if_t<(is_testable_jonk_type_v<T> && is_convertible_from_jonk_v<T>) || is_jonk_type_v<T>, int> = 0>
 		[[nodiscard]] inline T getOrDefault(const T& dflt) const noexcept {
@@ -181,11 +194,11 @@ namespace jonk {
 		[[nodiscard]] inline T getOrDefault() const noexcept(std::is_nothrow_default_constructible_v<T>) {
 			return is<T>() ? get<T>() : T();
 		}
-		template<typename T, std::enable_if_t<(((is_testable_jonk_type_v<T>&& is_convertible_from_jonk_v<T>) || is_jonk_type_v<T>) && !eng::is_optional_v<T> && !std::is_same_v<T, nullptr_t> && !std::is_same_v<T, std::nullopt_t>), int> = 0>
+		template<typename T, std::enable_if_t<(((is_testable_jonk_type_v<T> && is_convertible_from_jonk_v<T>) || is_jonk_type_v<T>) && !eng::is_optional_v<T> && !std::is_same_v<T, nullptr_t> && !std::is_same_v<T, std::nullopt_t>), int> = 0>
 		[[nodiscard]] inline std::optional<T> getOptional() const noexcept {
 			return is<T>() ? std::make_optional<T>(get<T>()) : std::nullopt;
 		}
-		
+
 
 		// TODO: visit function???
 
@@ -244,20 +257,8 @@ namespace jonk {
 	[[nodiscard]] inline bool operator !=(const nullptr_t, const Jonk& jonk) noexcept { return !jonk.isNull(); }
 	[[nodiscard]] inline bool operator !=(const Jonk& jonk, const nullptr_t) noexcept { return !jonk.isNull(); }
 
-
-	template<typename T, std::enable_if_t<(is_testable_jonk_type_v<T> || is_jonk_type_v<T>), int>>
-	[[nodiscard]] inline bool Jonk::is() const noexcept { return JonkTypeCompat<T>::jonkIs(*this); }
-	template<> [[nodiscard]] inline bool Jonk::is<nullptr_t, 0>() const noexcept { return is<JonkType::Null>(); }
-	template<> [[nodiscard]] inline bool Jonk::is<JonkObject, 0>() const noexcept { return is<JonkType::Object>(); }
-	template<> [[nodiscard]] inline bool Jonk::is<JonkArray, 0>() const noexcept { return is<JonkType::Array>(); }
-	template<> [[nodiscard]] inline bool Jonk::is<JonkString, 0>() const noexcept { return is<JonkType::String>(); }
-	//template<> [[nodiscard]] inline bool Jonk::is<JonkFloat, 0>() const noexcept { return is<JonkType::Float>(); }
-	//template<> [[nodiscard]] inline bool Jonk::is<JonkInt, 0>() const noexcept { return is<JonkType::Int>(); }
-	//template<> [[nodiscard]] inline bool Jonk::is<JonkUint, 0>() const noexcept { return is<JonkType::Uint>(); }
-	template<> [[nodiscard]] inline bool Jonk::is<bool, 0>() const noexcept { return is<JonkType::Bool>(); }
-
-	template<typename T, std::enable_if_t<(is_convertible_from_jonk_v<T> || is_jonk_type_v<T>), int>>
-	[[nodiscard]] inline T Jonk::get() const { return JonkTypeCompat<T>::fromJonk(*this); }
+	template<typename T>
+	[[nodiscard]] inline std::enable_if_t<is_convertible_from_jonk_v<T> || is_jonk_type_v<T>, T> Jonk::get() const { return JonkTypeCompat<T>::fromJonk(*this); }
 	template<> [[nodiscard]] inline nullptr_t Jonk::get<nullptr_t>() const { return get<JonkType::Null>(); }
 	template<> [[nodiscard]] inline JonkObject Jonk::get<JonkObject>() const { return get<JonkType::Object>(); }
 	template<> [[nodiscard]] inline JonkArray Jonk::get<JonkArray>() const { return get<JonkType::Array>(); }
@@ -364,7 +365,7 @@ namespace jonk {
 				return jonk.isInt() && (jonk.asInt() <= std::numeric_limits<T>::max());
 			else
 				return (jonk.isUint() && (jonk.asUint() <= std::numeric_limits<T>::max()))
-					|| (jonk.isInt() && (jonk.asInt() >= 0) && (jonk.asInt() <= std::numeric_limits<T>::max()));
+					|| (jonk.isInt() && (jonk.asInt() >= 0) && (static_cast<JonkUint>(jonk.asInt()) <= std::numeric_limits<T>::max()));
 		}
 	};
 
@@ -374,8 +375,9 @@ namespace jonk {
 
 namespace jonk {
 
-	template<typename T, std::enable_if_t<(is_testable_jonk_type_v<T> || is_jonk_type_v<T>), int>>
-	bool JonkObject::hasKey(const std::string_view key) const {
+	template<typename T>
+	std::enable_if_t<(is_testable_jonk_type_v<T> || is_jonk_type_v<T>), bool>
+	JonkObject::hasKey(const std::string_view key) const {
 		const auto it = data.find(key);
 		return (it != data.end()) && it->second.template is<T>();
 	}
@@ -385,12 +387,12 @@ namespace jonk {
 		return data.at(key).template as<jonkType>();
 	}
 	template<JonkType jonkType>
-	const jonk_type_ref<jonkType> JonkObject::at(const key_type& key) const {
+	jonk_type_const_ref<jonkType> JonkObject::at(const key_type& key) const {
 		return data.at(key).template as<jonkType>();
 	}
 
 	template<JonkType jonkType>
-	const jonk_type_ref<jonkType> JonkObject::get(const key_type& key) const {
+	jonk_type_const_ref<jonkType> JonkObject::get(const key_type& key) const {
 		return data.at(key).template as<jonkType>();
 	}
 	template<typename T, std::enable_if_t<is_convertible_from_jonk_v<T> || is_jonk_type_v<T>, int>>
@@ -398,19 +400,22 @@ namespace jonk {
 		return data.at(key).template get<T>();
 	}
 
-	template<typename T, std::enable_if_t<((is_testable_jonk_type_v<T> && is_convertible_from_jonk_v<T>) || is_jonk_type_v<T>), int>>
-	T JonkObject::getOrDefault(const std::string_view key, const T& dflt) const noexcept {
+	template<typename T>
+	std::enable_if_t<((is_testable_jonk_type_v<T> && is_convertible_from_jonk_v<T>) || is_jonk_type_v<T>), T>
+	JonkObject::getOrDefault(const std::string_view key, const T& dflt) const noexcept {
 		const auto it = data.find(key);
 		return ((it != data.end()) && it->second.template is<T>()) ? it->second.template get<T>() : dflt;
 	}
-	template<typename T, std::enable_if_t<((is_testable_jonk_type_v<T> && is_convertible_from_jonk_v<T>) || is_jonk_type_v<T>) && std::is_default_constructible_v<T>, int>>
-	T JonkObject::getOrDefault(const std::string_view key) const noexcept(std::is_nothrow_default_constructible_v<T>) {
+	template<typename T>
+	std::enable_if_t<((is_testable_jonk_type_v<T> && is_convertible_from_jonk_v<T>) || is_jonk_type_v<T>) && std::is_default_constructible_v<T>, T>
+	JonkObject::getOrDefault(const std::string_view key) const noexcept(std::is_nothrow_default_constructible_v<T>) {
 		const auto it = data.find(key);
 		return ((it != data.end()) && it->second.template is<T>()) ? it->second.template get<T>() : T();
 	}
-	
-	template<typename T, std::enable_if_t<(((is_testable_jonk_type_v<T> && is_convertible_from_jonk_v<T>) || is_jonk_type_v<T>) && !eng::is_optional_v<T> && !std::is_same_v<T, nullptr_t> && !std::is_same_v<T, std::nullopt_t>), int>>
-	std::optional<T> JonkObject::getOptional(const std::string_view key) const noexcept {
+
+	template<typename T>
+	std::enable_if_t<(((is_testable_jonk_type_v<T> && is_convertible_from_jonk_v<T>) || is_jonk_type_v<T>) && !eng::is_optional_v<T> && !std::is_same_v<T, nullptr_t> && !std::is_same_v<T, std::nullopt_t>), std::optional<T>>
+	JonkObject::getOptional(const std::string_view key) const noexcept {
 		const auto it = data.find(key);
 		return ((it != data.end()) && it->second.template is<T>()) ? std::make_optional<T>(it->second.template get<T>()) : std::nullopt;
 	}

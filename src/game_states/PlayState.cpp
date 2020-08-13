@@ -14,6 +14,7 @@
 #include "util/math/math.h"
 #include "util/resources/Image.h"
 #include "util/resources/ResourceManager.h"
+#include "util/nbt/NBT.h" // TODO: remove
 
 #include <iostream> // TODO: remove
 
@@ -29,6 +30,22 @@ namespace eng {
 			takeScreenshotKeyHandler(*input::TAKE_SCREENSHOT, [this](const input::KeyInput&) { this->takeScreenshot(); }) {
 		world.setPlayer(&camera);
 		world.setWorldRenderer(&worldRenderer);
+
+		bool parsedSNBT = false;
+		nbt::NBT nbt {};
+		const std::string inputSNBT =
+			R"({ "awdd": 13b, "aw": 16d, a: 198f,'BA':[B; 32, 16, 127, -4, 255, 3], "B": -1.34, "c": { "awd": 23, "adw": 35L, "ls": [ "adawafaf", -12s, 2, [I; 23, -344, 232, 45, ] ] }, })";
+		try {
+			nbt = nbt::parseSNBT(inputSNBT);
+			parsedSNBT = true;
+		} catch(const nbt::ParseError& parseError) {
+			std::cerr << '\n' << "Error parsing SNBT:" << '\n';
+			std::cerr << parseError.what() << '\n' << '\n';
+		}
+		if (parsedSNBT) {
+			nbt.asCompound().at<nbt::TagByteArray>("BA").emplace_back(0xFF);
+			std::cout << '\n' << nbt.toSNBT() << '\n' << '\n';
+		}
 
 		// Vertex Array setup
 		//vao.bind(); // bind the VAO

@@ -1,5 +1,6 @@
 #include "JonkObject.h"
 
+#include <utility>
 #include <sstream>
 
 #include "Jonk.h"
@@ -13,9 +14,6 @@ namespace jonk {
 		return lhs < rhs;
 	}
 	bool JonkObject::KeyCompare::operator ()(const std::string& lhs, const std::string_view rhs) const noexcept {
-		return lhs < rhs;
-	}
-	constexpr bool JonkObject::KeyCompare::operator ()(const std::string_view lhs, const std::string_view rhs) const noexcept {
 		return lhs < rhs;
 	}
 
@@ -183,12 +181,18 @@ namespace jonk {
 			if (indentAmount) {
 				sstr.put('\n');
 				for (size_t i = 0; i < innerIndentLevel * indentAmount; i++) sstr.put(indentChar);
+			} else {
+				sstr.put(' ');
 			}
 			sstr << stringifyKey(key) << ": "sv << val.toJonkString(indentAmount, indentChar, innerIndentLevel) << ","sv;
 		}
-		if (indentAmount && !data.empty()) {
-			sstr.put('\n');
-			for (size_t i = 0; i < indentLevel * indentAmount; i++) sstr.put(indentChar);
+		if (!data.empty()) {
+			if (indentAmount) {
+				sstr.put('\n');
+				for (size_t i = 0; i < indentLevel * indentAmount; i++) sstr.put(indentChar);
+			} else {
+				sstr.put(' ');
+			}
 		}
 		sstr.put('}');
 		return sstr.str();

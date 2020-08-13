@@ -4,6 +4,9 @@
 # clangd
 .clangd/
 
+# ccls
+.ccls-cache/
+
 # Build Folder
 build/
 

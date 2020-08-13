@@ -21,7 +21,7 @@ namespace jonk {
 			bool operator ()(const std::string& lhs, const std::string& rhs) const noexcept;
 			bool operator ()(const std::string_view lhs, const std::string& rhs) const noexcept;
 			bool operator ()(const std::string& lhs, const std::string_view rhs) const noexcept;
-			constexpr bool operator ()(const std::string_view lhs, const std::string_view rhs) const noexcept;
+			constexpr bool operator ()(const std::string_view lhs, const std::string_view rhs) const noexcept { return lhs < rhs; }
 		};
 		using map_type = std::map<std::string, Jonk, KeyCompare>;
 		using key_type = typename map_type::key_type;
@@ -82,8 +82,9 @@ namespace jonk {
 		inline bool hasKey(const std::string_view key) const {
 			return hasKey(key, jonkType);
 		}
-		template<typename T, std::enable_if_t<is_testable_jonk_type_v<T> || is_jonk_type_v<T>, int> = 0>
-		bool hasKey(const std::string_view key) const;
+		template<typename T>
+		std::enable_if_t<(is_testable_jonk_type_v<T> || is_jonk_type_v<T>), bool>
+		hasKey(const std::string_view key) const;
 
 		Jonk& operator[](const key_type& key);
 
@@ -92,21 +93,24 @@ namespace jonk {
 		template<JonkType jonkType>
 		jonk_type_ref<jonkType> at(const key_type& key);
 		template<JonkType jonkType>
-		const jonk_type_ref<jonkType> at(const key_type& key) const;
+		jonk_type_const_ref<jonkType> at(const key_type& key) const;
 
 		const Jonk& get(const key_type& key) const;
 		template<JonkType jonkType>
-		const jonk_type_ref<jonkType> get(const key_type& key) const;
+		jonk_type_const_ref<jonkType> get(const key_type& key) const;
 		template<typename T, std::enable_if_t<is_convertible_from_jonk_v<T> || is_jonk_type_v<T>, int> = 0>
 		T get(const key_type& key) const;
 
-		template<typename T, std::enable_if_t<(is_testable_jonk_type_v<T> && is_convertible_from_jonk_v<T>) || is_jonk_type_v<T>, int> = 0>
-		T getOrDefault(const std::string_view key, const T& dflt) const noexcept;
-		template<typename T, std::enable_if_t<((is_testable_jonk_type_v<T> && is_convertible_from_jonk_v<T>) || is_jonk_type_v<T>) && std::is_default_constructible_v<T>, int> = 0>
-		T getOrDefault(const std::string_view key) const noexcept(std::is_nothrow_default_constructible_v<T>);
-		
-		template<typename T, std::enable_if_t<(((is_testable_jonk_type_v<T> && is_convertible_from_jonk_v<T>) || is_jonk_type_v<T>) && !eng::is_optional_v<T> && !std::is_same_v<T, nullptr_t> && !std::is_same_v<T, std::nullopt_t>), int> = 0>
-		std::optional<T> getOptional(const std::string_view key) const noexcept;
+		template<typename T>
+		std::enable_if_t<((is_testable_jonk_type_v<T> && is_convertible_from_jonk_v<T>) || is_jonk_type_v<T>), T>
+		getOrDefault(const std::string_view key, const T& dflt) const noexcept;
+		template<typename T>
+		std::enable_if_t<((is_testable_jonk_type_v<T> && is_convertible_from_jonk_v<T>) || is_jonk_type_v<T>) && std::is_default_constructible_v<T>, T>
+		getOrDefault(const std::string_view key) const noexcept(std::is_nothrow_default_constructible_v<T>);
+
+		template<typename T>
+		std::enable_if_t<(((is_testable_jonk_type_v<T> && is_convertible_from_jonk_v<T>) || is_jonk_type_v<T>) && !eng::is_optional_v<T> && !std::is_same_v<T, nullptr_t> && !std::is_same_v<T, std::nullopt_t>), std::optional<T>>
+		getOptional(const std::string_view key) const noexcept;
 
 		iterator find(const key_type& key);
 		const_iterator find(const key_type& key) const;
