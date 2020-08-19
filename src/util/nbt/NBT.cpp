@@ -284,16 +284,6 @@ namespace nbt {
 		throw bad_nbt_cast();
 	}
 
-    size_t NBT::size() const {
-		if (isByteArray()) return asByteArray().size();
-		if (isString()) return asString().size();
-		if (isList()) return asList().size();
-		if (isCompound()) return asCompound().size();
-        if (isIntArray()) return asIntArray().size();
-        if (isLongArray()) return asLongArray().size();
-		return 1;
-	}
-
     NBT::operator nbt_byte() const { return getByte(); }
 	NBT::operator nbt_short() const { return getShort(); }
 	NBT::operator nbt_int() const { return getInt(); }
@@ -351,35 +341,8 @@ namespace nbt {
 		return result + '"';
 	}
 
-    static std::string stringifyNBTList(const nbt_list& arr, const size_t indentAmount, const char indentChar, const size_t indentLevel) {
-		const auto innerIndentLevel = indentLevel + 1;
-		const bool shouldInline = ((arr.size() <= 4) && std::all_of(arr.begin(), arr.end(), [](const NBT& n) noexcept { return n.isNumber(); })) || !indentAmount;
-
-		std::ostringstream sstr;
-		sstr.put('[');
-		for (auto& val : arr) {
-			if (shouldInline) {
-				sstr.put(' ');
-			} else if (indentAmount) {
-				sstr.put('\n');
-				for (size_t i = 0; i < innerIndentLevel * indentAmount; i++) sstr.put(indentChar);
-			}
-			sstr << val.toSNBT(indentAmount, indentChar, innerIndentLevel) << ',';
-		}
-		if (!arr.empty()) {
-			if (shouldInline) {
-				sstr.put(' ');
-			} else if (indentAmount) {
-				sstr.put('\n');
-				for (size_t i = 0; i < (indentLevel * indentAmount); i++) sstr.put(indentChar);
-			}
-		}
-		sstr.put(']');
-		return sstr.str();
-	}
-
     template<typename T, char typeChar>
-    static std::string stringifyNBTTypedArray(const T& arr, const size_t indentAmount, const char indentChar, const size_t indentLevel) {
+    static std::string stringifyNBTIntegerArray(const T& arr, const size_t indentAmount, const char indentChar, const size_t indentLevel) {
 		const auto innerIndentLevel = indentLevel + 1;
 		const bool shouldInline = (arr.size() <= 4) || !indentAmount;
 
@@ -431,17 +394,17 @@ namespace nbt {
 				return ((val < 0) ? ('-' + std::string(parsing::infinity_string)) : std::string(parsing::infinity_string)) + 'd';
 			return fmt::format("{}d", val);
 		} else if (isByteArray()) {
-			return stringifyNBTTypedArray<nbt_byte_array, 'B'>(asByteArray(), indentAmount, indentChar, indentLevel);
+			return stringifyNBTIntegerArray<nbt_byte_array, 'B'>(asByteArray(), indentAmount, indentChar, indentLevel);
 		} else if (isString()) {
 			return stringifyNBTString(asString());
 		} else if (isList()) {
-			return stringifyNBTList(asList(), indentAmount, indentChar, indentLevel);
+			return asList().toSNBT(indentAmount, indentChar, indentLevel);
 		} else if (isCompound()) {
 			return asCompound().toSNBT(indentAmount, indentChar, indentLevel);
 		} else if (isIntArray()) {
-			return stringifyNBTTypedArray<nbt_int_array, 'I'>(asIntArray(), indentAmount, indentChar, indentLevel);
+			return stringifyNBTIntegerArray<nbt_int_array, 'I'>(asIntArray(), indentAmount, indentChar, indentLevel);
 		} else if (isLongArray()) {
-			return stringifyNBTTypedArray<nbt_long_array, 'L'>(asLongArray(), indentAmount, indentChar, indentLevel);
+			return stringifyNBTIntegerArray<nbt_long_array, 'L'>(asLongArray(), indentAmount, indentChar, indentLevel);
 		}
 		return "";
 	}

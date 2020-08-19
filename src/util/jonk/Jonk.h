@@ -1,4 +1,5 @@
-#pragma once
+#ifndef JONK_H
+#define JONK_H
 
 #include <variant>
 #include <type_traits>
@@ -274,7 +275,7 @@ namespace jonk {
 	}
 	template<typename T, typename U, typename... Args>
 	inline T& Jonk::emplace(std::initializer_list<U> initList, Args&&... args) {
-		return data.emplace(initList, std::forward<Args>(args)...);
+		return data.emplace<T>(initList, std::forward<Args>(args)...);
 	}
 	template<JonkType jonkType, typename... Args>
 	jonk_type_ref<jonkType> Jonk::emplace(Args&&... args) {
@@ -424,3 +425,5 @@ namespace jonk {
 
 // Jonk compat for common types
 #include "MiscJonkCompat.h"
+
+#endif

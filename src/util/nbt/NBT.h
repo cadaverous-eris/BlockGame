@@ -1,14 +1,19 @@
-#pragma once
+#ifndef NBT_H
+#define NBT_H
 
 #include <variant>
 #include <typeinfo>
 #include <limits>
 #include <algorithm>
+#include <map>
+#include <vector>
+#include <optional>
 #include <iostream>
 
 #include "nbt_types.h"
-#include "util/type_traits.h"
+#include "NBTList.h"
 #include "NBTCompound.h"
+#include "util/type_traits.h"
 #include "parsing_utils.h"
 #include "NBTCompat.h"
 
@@ -19,6 +24,7 @@ namespace nbt {
 	};
 
     using parsing::ParseError;
+	using parsing::parseNBT;
 	using parsing::parseSNBT;
 
     class NBT;
@@ -117,7 +123,7 @@ namespace nbt {
         [[nodiscard]] inline bool isFloatingPoint() const noexcept { return isFloat() || isDouble(); }
 		[[nodiscard]] inline bool isNumber() const noexcept { return isIntegral() || isFloatingPoint(); }
 		[[nodiscard]] bool is(const TagType tagType) const noexcept;
-		template<TagType tagType>
+		template<TagType tagType, typename = nbt_type<tagType>>
 		[[nodiscard]] inline bool is() const noexcept {
 			if constexpr (tagType == TagEnd) return false;
 			else return std::holds_alternative<nbt_type<tagType>>(value);
@@ -139,9 +145,30 @@ namespace nbt {
 			else return NBTTypeCompat<T>::nbtIs(*this);
         }
 
+		[[nodiscard]] inline bool isListOfBytes() const noexcept { return is<TagList>() && asList().is<TagByte>(); }
+		[[nodiscard]] inline bool isListOfShorts() const noexcept { return is<TagList>() && asList().is<TagShort>(); }
+        [[nodiscard]] inline bool isListOfInts() const noexcept { return is<TagList>() && asList().is<TagInt>(); }
+        [[nodiscard]] inline bool isListOfLongs() const noexcept { return is<TagList>() && asList().is<TagLong>(); }
+        [[nodiscard]] inline bool isListOfFloats() const noexcept { return is<TagList>() && asList().is<TagFloat>(); }
+        [[nodiscard]] inline bool isListOfDoubles() const noexcept { return is<TagList>() && asList().is<TagDouble>(); }
+        [[nodiscard]] inline bool isListOfByteArrays() const noexcept { return is<TagList>() && asList().is<TagByteArray>(); }
+        [[nodiscard]] inline bool isListOfStrings() const noexcept { return is<TagList>() && asList().is<TagString>(); }
+        [[nodiscard]] inline bool isListOfLists() const noexcept { return is<TagList>() && asList().is<TagList>(); }
+        [[nodiscard]] inline bool isListOfCompounds() const noexcept { return is<TagList>() && asList().is<TagCompound>(); }
+        [[nodiscard]] inline bool isListOfIntArrays() const noexcept { return is<TagList>() && asList().is<TagIntArray>(); }
+        [[nodiscard]] inline bool isListOfLongArrays() const noexcept { return is<TagList>() && asList().is<TagLongArray>(); }
+		[[nodiscard]] inline bool isListOf(TagType tagType) const noexcept { return is<TagList>() && (as<TagList>().getTagType() == tagType); }
+		template<TagType tagType, typename = nbt_type<tagType>>
+		[[nodiscard]] inline bool isListOf() const noexcept { return isList() && asList().is<tagType>(); }
+		template<typename T, std::enable_if_t<is_testable_nbt_type_v<T> || is_nbt_type_v<T>, int> = 0>
+		[[nodiscard]] inline bool isListOf() const noexcept { return isList() && asList().is<T>(); }
+
 		[[nodiscard]] inline TagType getTagType() const noexcept {
 			return TagType { static_cast<int>(value.index()) + 1 };
 		}
+
+		[[nodiscard]] inline variant_type& asVariant() noexcept { return value; }
+		[[nodiscard]] inline const variant_type& asVariant() const noexcept { return value; }
 
         [[nodiscard]] nbt_byte& asByte();
 		[[nodiscard]] const nbt_byte& asByte() const;
@@ -167,7 +194,7 @@ namespace nbt {
 		[[nodiscard]] const nbt_int_array& asIntArray() const;
         [[nodiscard]] nbt_long_array& asLongArray();
 		[[nodiscard]] const nbt_long_array& asLongArray() const;
-		template<TagType tagType, typename = std::void_t<nbt_type<tagType>>>
+		template<TagType tagType, typename = nbt_type<tagType>>
 		[[nodiscard]] inline nbt_type<tagType>& as() {
 			if constexpr (tagType == TagByte) return asByte();
 			else if constexpr (tagType == TagShort) return asShort();
@@ -182,7 +209,7 @@ namespace nbt {
 			else if constexpr (tagType == TagIntArray) return asIntArray();
 			else if constexpr (tagType == TagLongArray) return asLongArray();
 		}
-		template<TagType tagType, typename = std::void_t<nbt_type<tagType>>>
+		template<TagType tagType, typename = nbt_type<tagType>>
 		[[nodiscard]] inline const nbt_type<tagType>& as() const {
 			if constexpr (tagType == TagByte) return asByte();
 			else if constexpr (tagType == TagShort) return asShort();
@@ -198,6 +225,35 @@ namespace nbt {
 			else if constexpr (tagType == TagLongArray) return asLongArray();
 		}
 
+		[[nodiscard]] inline std::vector<nbt_byte>& asListOfBytes() { return asList().as<TagByte>(); }
+		[[nodiscard]] inline const std::vector<nbt_byte>& asListOfBytes() const { return asList().as<TagByte>(); }
+		[[nodiscard]] inline std::vector<nbt_short>& asListOfShorts() { return asList().as<TagShort>(); }
+		[[nodiscard]] inline const std::vector<nbt_short>& asListOfShorts() const { return asList().as<TagShort>(); }
+        [[nodiscard]] inline std::vector<nbt_int>& asListOfInts() { return asList().as<TagInt>(); }
+        [[nodiscard]] inline const std::vector<nbt_int>& asListOfInts() const { return asList().as<TagInt>(); }
+        [[nodiscard]] inline std::vector<nbt_long>& asListOfLongs() { return asList().as<TagLong>(); }
+        [[nodiscard]] inline const std::vector<nbt_long>& asListOfLongs() const { return asList().as<TagLong>(); }
+        [[nodiscard]] inline std::vector<nbt_float>& asListOfFloats() { return asList().as<TagFloat>(); }
+        [[nodiscard]] inline const std::vector<nbt_float>& asListOfFloats() const { return asList().as<TagFloat>(); }
+        [[nodiscard]] inline std::vector<nbt_double>& asListOfDoubles() { return asList().as<TagDouble>(); }
+        [[nodiscard]] inline const std::vector<nbt_double>& asListOfDoubles() const { return asList().as<TagDouble>(); }
+        [[nodiscard]] inline std::vector<nbt_byte_array>& asListOfByteArrays() { return asList().as<TagByteArray>(); }
+        [[nodiscard]] inline const std::vector<nbt_byte_array>& asListOfByteArrays() const { return asList().as<TagByteArray>(); }
+        [[nodiscard]] inline std::vector<nbt_string>& asListOfStrings() { return asList().as<TagString>(); }
+        [[nodiscard]] inline const std::vector<nbt_string>& asListOfStrings() const { return asList().as<TagString>(); }
+        [[nodiscard]] inline std::vector<nbt_list>& asListOfLists() { return asList().as<TagList>(); }
+        [[nodiscard]] inline const std::vector<nbt_list>& asListOfLists() const { return asList().as<TagList>(); }
+        [[nodiscard]] inline std::vector<nbt_compound>& asListOfCompounds() { return asList().as<TagCompound>(); }
+        [[nodiscard]] inline const std::vector<nbt_compound>& asListOfCompounds() const { return asList().as<TagCompound>(); }
+        [[nodiscard]] inline std::vector<nbt_int_array>& asListOfIntArrays() { return asList().as<TagIntArray>(); }
+        [[nodiscard]] inline const std::vector<nbt_int_array>& asListOfIntArrays() const { return asList().as<TagIntArray>(); }
+        [[nodiscard]] inline std::vector<nbt_long_array>& asListOfLongArrays() { return asList().as<TagLongArray>(); }
+        [[nodiscard]] inline const std::vector<nbt_long_array>& asListOfLongArrays() const { return asList().as<TagLongArray>(); }
+		template<TagType tagType, typename = nbt_type<tagType>>
+		[[nodiscard]] inline std::vector<nbt_type<tagType>>& asListOf() { return asList().as<tagType>(); }
+		template<TagType tagType, typename = nbt_type<tagType>>
+		[[nodiscard]] inline const std::vector<nbt_type<tagType>>& asListOf() const { return asList().as<tagType>(); }
+
         [[nodiscard]] nbt_byte getByte() const;
         [[nodiscard]] nbt_short getShort() const;
 		[[nodiscard]] nbt_int getInt() const;
@@ -210,7 +266,7 @@ namespace nbt {
         [[nodiscard]] nbt_compound getCompound() const;
         [[nodiscard]] nbt_int_array getIntArray() const;
         [[nodiscard]] nbt_long_array getLongArray() const;
-		template<TagType tagType, typename = std::void_t<nbt_type<tagType>>>
+		template<TagType tagType, typename = nbt_type<tagType>>
 		[[nodiscard]] inline nbt_type<tagType> get() const {
 			if constexpr (tagType == TagByte) return getByte();
 			else if constexpr (tagType == TagShort) return getShort();
@@ -242,6 +298,23 @@ namespace nbt {
 			else return NBTTypeCompat<T>::fromNBT(*this);
         }
 
+		[[nodiscard]] inline std::vector<nbt_byte> getListOfBytes() const { return asList().as<TagByte>(); }
+		[[nodiscard]] inline std::vector<nbt_short> getListOfShorts() const { return asList().as<TagShort>(); }
+        [[nodiscard]] inline std::vector<nbt_int> getListOfInts() const { return asList().as<TagInt>(); }
+        [[nodiscard]] inline std::vector<nbt_long> getListOfLongs() const { return asList().as<TagLong>(); }
+        [[nodiscard]] inline std::vector<nbt_float> getListOfFloats() const { return asList().as<TagFloat>(); }
+        [[nodiscard]] inline std::vector<nbt_double> getListOfDoubles() const { return asList().as<TagDouble>(); }
+        [[nodiscard]] inline std::vector<nbt_byte_array> getListOfByteArrays() const { return asList().as<TagByteArray>(); }
+        [[nodiscard]] inline std::vector<nbt_string> getListOfStrings() const { return asList().as<TagString>(); }
+        [[nodiscard]] inline std::vector<nbt_list> getListOfLists() const { return asList().as<TagList>(); }
+        [[nodiscard]] inline std::vector<nbt_compound> getListOfCompounds() const { return asList().as<TagCompound>(); }
+        [[nodiscard]] inline std::vector<nbt_int_array> getListOfIntArrays() const { return asList().as<TagIntArray>(); }
+        [[nodiscard]] inline std::vector<nbt_long_array> getListOfLongArrays() const { return asList().as<TagLongArray>(); }
+		template<TagType tagType, typename = nbt_type<tagType>>
+		[[nodiscard]] inline std::vector<nbt_type<tagType>>& getListOf() { return asList().as<tagType>(); }
+		template<typename T, std::enable_if_t<(is_convertible_from_nbt_v<T> || is_nbt_type_v<T>), int> = 0>
+		[[nodiscard]] inline const std::vector<T>& getListOf() const { return asList().get<T>(); }
+
 		template<typename T, std::enable_if_t<(is_testable_nbt_type_v<T> && is_convertible_from_nbt_v<T>) || is_nbt_type_v<T>, int> = 0>
 		[[nodiscard]] inline T getOrDefault(const T& dflt) const noexcept {
 			return is<T>() ? get<T>() : dflt;
@@ -264,24 +337,32 @@ namespace nbt {
 		template<TagType tagType, typename U, typename... Args>
 		nbt_type<tagType>& emplace(std::initializer_list<U> initList, Args&&... args);
 
-		size_t size() const;
+		inline size_t size() const noexcept {
+			if (isByteArray()) return asByteArray().size();
+			if (isString()) return asString().size();
+			if (isList()) return asList().size();
+			if (isCompound()) return asCompound().size();
+			if (isIntArray()) return asIntArray().size();
+			if (isLongArray()) return asLongArray().size();
+			return 1;
+		}
 
 		[[nodiscard]] inline bool operator ==(const NBT& b) const noexcept { return value == b.value; }
 		[[nodiscard]] inline bool operator !=(const NBT& b) const noexcept { return value != b.value; }
 
-        [[nodiscard]] operator nbt_byte() const;
-		[[nodiscard]] operator nbt_short() const;
-		[[nodiscard]] operator nbt_int() const;
-		[[nodiscard]] operator nbt_long() const;
-		[[nodiscard]] operator nbt_float() const;
-		[[nodiscard]] operator nbt_double() const;
-		[[nodiscard]] operator nbt_byte_array() const;
-        [[nodiscard]] operator nbt_string() const;
-        [[nodiscard]] operator nbt_string_view() const;
-        [[nodiscard]] operator nbt_list() const;
-        [[nodiscard]] operator nbt_compound() const;
-        [[nodiscard]] operator nbt_int_array() const;
-        [[nodiscard]] operator nbt_long_array() const;
+        [[nodiscard]] explicit operator nbt_byte() const;
+		[[nodiscard]] explicit operator nbt_short() const;
+		[[nodiscard]] explicit operator nbt_int() const;
+		[[nodiscard]] explicit operator nbt_long() const;
+		[[nodiscard]] explicit operator nbt_float() const;
+		[[nodiscard]] explicit operator nbt_double() const;
+		[[nodiscard]] explicit operator nbt_byte_array() const;
+        [[nodiscard]] explicit operator nbt_string() const;
+        [[nodiscard]] explicit operator nbt_string_view() const;
+        [[nodiscard]] explicit operator nbt_list() const;
+        [[nodiscard]] explicit operator nbt_compound() const;
+        [[nodiscard]] explicit operator nbt_int_array() const;
+        [[nodiscard]] explicit operator nbt_long_array() const;
 
 		//[[nodiscard]] operator bool() const noexcept;
 
@@ -294,13 +375,54 @@ namespace nbt {
 
     };
 
+
+	template<>
+	struct NBTTypeCompat<nbt_string_view> {
+		//static nbt_string toNBT(const nbt_string_view& sv) { return nbt_string(sv); }
+		static nbt_string_view fromNBT(const NBT& nbt) { return nbt.asString(); }
+		static bool nbtIs(const NBT& nbt) noexcept { return nbt.isString(); }
+	};
+
+    template<>
+	struct NBTTypeCompat<uint8_t> {
+		static nbt_byte toNBT(const uint8_t& b) { return static_cast<nbt_byte>(b); }
+		static uint8_t fromNBT(const NBT& nbt) { return static_cast<uint8_t>(nbt.asByte()); }
+		static bool nbtIs(const NBT& nbt) noexcept { return nbt.isByte(); }
+	};
+    template<>
+	struct NBTTypeCompat<uint16_t> {
+		static nbt_short toNBT(const uint16_t& b) { return static_cast<nbt_short>(b); }
+		static uint16_t fromNBT(const NBT& nbt) { return static_cast<uint16_t>(nbt.asShort()); }
+		static bool nbtIs(const NBT& nbt) noexcept { return nbt.isShort(); }
+	};
+    template<>
+	struct NBTTypeCompat<uint32_t> {
+		static nbt_int toNBT(const uint32_t& b) { return static_cast<nbt_int>(b); }
+		static uint32_t fromNBT(const NBT& nbt) { return static_cast<uint32_t>(nbt.asInt()); }
+		static bool nbtIs(const NBT& nbt) noexcept { return nbt.isInt(); }
+	};
+    template<>
+	struct NBTTypeCompat<uint64_t> {
+		static nbt_long toNBT(const uint64_t& b) { return static_cast<nbt_long>(b); }
+		static uint64_t fromNBT(const NBT& nbt) { return static_cast<uint64_t>(nbt.asLong()); }
+		static bool nbtIs(const NBT& nbt) noexcept { return nbt.isLong(); }
+	};
+
+    template<>
+	struct NBTTypeCompat<bool> {
+		static nbt_byte toNBT(const bool& b) { return static_cast<nbt_byte>(b); }
+		static bool fromNBT(const NBT& nbt) { return static_cast<bool>(nbt.asByte()); }
+		static bool nbtIs(const NBT& nbt) noexcept { return nbt.isByte(); }
+	};
+
+
     template<typename T, typename... Args>
 	inline T& NBT::emplace(Args&&... args) {
 		return value.emplace<T>(std::forward<Args>(args)...);
 	}
 	template<typename T, typename U, typename... Args>
 	inline T& NBT::emplace(std::initializer_list<U> initList, Args&&... args) {
-		return value.emplace(initList, std::forward<Args>(args)...);
+		return value.emplace<T>(initList, std::forward<Args>(args)...);
 	}
 	template<TagType tagType, typename... Args>
 	nbt_type<tagType>& NBT::emplace(Args&&... args) {
@@ -312,50 +434,114 @@ namespace nbt {
 	}
 
 
-	template<>
-	struct NBTTypeCompat<nbt_string_view> {
-		//static NBT toNBT(const nbt_string_view& sv) { return nbt_string(sv); }
-		static nbt_string_view fromNBT(const NBT& nbt) { return nbt.asString(); }
-		static bool nbtIs(const NBT& nbt) noexcept { return nbt.isString(); }
-	};
+	template<typename T, std::enable_if_t<(is_convertible_to_nbt_v<T>), int>>
+	NBTList::NBTList(const std::vector<T>& vec) : data(std::vector<to_nbt_conversion_result_type_t<T>>{}) {
+		auto& d = as<nbt_tag_type<to_nbt_conversion_result_type_t<T>>>();
+		d.reserve(vec.size());
+		for (const auto& i : vec)
+			d.emplace_back(NBTTypeCompat<T>::toNBT(i));
+	}
+	template<typename T, std::enable_if_t<(is_convertible_to_nbt_v<T>), int>>
+	NBTList::NBTList(std::vector<T>&& vec) : data(std::vector<to_nbt_conversion_result_type_t<T>>{}) {
+		auto& d = as<nbt_tag_type<to_nbt_conversion_result_type_t<T>>>();
+		d.reserve(vec.size());
+		for (const auto& i : vec)
+			d.emplace_back(NBTTypeCompat<T>::toNBT(i));
+	}
+	template<typename Iter, typename IterVal, std::enable_if_t<(is_convertible_to_nbt_v<IterVal> || is_nbt_type_v<IterVal>), int>>
+    NBTList::NBTList(Iter first, Iter last) : data(std::vector<to_nbt_conversion_result_type_t<IterVal>>{}) {
+		auto& d = as<nbt_tag_type<to_nbt_conversion_result_type_t<IterVal>>>();
+		for (auto it = first; it != last; it++) {
+			if constexpr (is_nbt_type_v<IterVal>) d.emplace_back(*it);
+			else d.emplace_back(NBTTypeCompat<IterVal>::toNBT(*it));
+		}
+	}
+	template<typename T, std::enable_if_t<(is_convertible_to_nbt_v<T> || is_nbt_type_v<T>), int>>
+	NBTList::NBTList(std::initializer_list<T> initList) : data(std::vector<to_nbt_conversion_result_type_t<T>>{}) {
+		auto& d = as<nbt_tag_type<to_nbt_conversion_result_type_t<T>>>();
+		d.reserve(initList.size());
+		for (const auto& i : initList) {
+			if constexpr (is_nbt_type_v<T>) d.emplace_back(i);
+			else d.emplace_back(NBTTypeCompat<T>::toNBT(i));
+		}
+	}
 
-    template<>
-	struct NBTTypeCompat<uint8_t> {
-		static NBT toNBT(const uint8_t& b) { return static_cast<nbt_byte>(b); }
-		static uint8_t fromNBT(const NBT& nbt) { return static_cast<uint8_t>(nbt.asByte()); }
-		static bool nbtIs(const NBT& nbt) noexcept { return nbt.isByte(); }
-	};
-    template<>
-	struct NBTTypeCompat<uint16_t> {
-		static NBT toNBT(const uint16_t& b) { return static_cast<nbt_short>(b); }
-		static uint16_t fromNBT(const NBT& nbt) { return static_cast<uint16_t>(nbt.asShort()); }
-		static bool nbtIs(const NBT& nbt) noexcept { return nbt.isShort(); }
-	};
-    template<>
-	struct NBTTypeCompat<uint32_t> {
-		static NBT toNBT(const uint32_t& b) { return static_cast<nbt_int>(b); }
-		static uint32_t fromNBT(const NBT& nbt) { return static_cast<uint32_t>(nbt.asInt()); }
-		static bool nbtIs(const NBT& nbt) noexcept { return nbt.isInt(); }
-	};
-    template<>
-	struct NBTTypeCompat<uint64_t> {
-		static NBT toNBT(const uint64_t& b) { return static_cast<nbt_long>(b); }
-		static uint64_t fromNBT(const NBT& nbt) { return static_cast<uint64_t>(nbt.asLong()); }
-		static bool nbtIs(const NBT& nbt) noexcept { return nbt.isInt(); }
-	};
+	template<typename T, std::enable_if_t<(is_convertible_to_nbt_v<T>), int>>
+	NBTList& NBTList::operator =(const std::vector<T>& vec) {
+		auto& d = data.emplace<std::vector<to_nbt_conversion_result_type_t<T>>>();
+		d.reserve(vec.size());
+		for (const auto& i : vec)
+			d.emplace_back(NBTTypeCompat<T>::toNBT(i));
+		return *this;
+	}
+	template<typename T, std::enable_if_t<(is_convertible_to_nbt_v<T>), int>>
+	NBTList& NBTList::operator =(std::vector<T>&& vec) {
+		auto& d = data.emplace<std::vector<to_nbt_conversion_result_type_t<T>>>();
+		d.reserve(vec.size());
+		for (const auto& i : vec)
+			d.emplace_back(NBTTypeCompat<T>::toNBT(i));
+		return *this;
+	}
+	template<typename T, std::enable_if_t<(is_convertible_to_nbt_v<T> || is_nbt_type_v<T>), int>>
+	NBTList& NBTList::operator =(std::initializer_list<T> initList) {
+		if constexpr (is_nbt_type_v<T>) {
+			data.emplace<std::vector<to_nbt_conversion_result_type_t<T>>>(initList);
+		} else {
+			auto& d = data.emplace<std::vector<to_nbt_conversion_result_type_t<T>>>();
+			d.reserve(initList.size());
+			for (const auto& i : initList) {
+				if constexpr (is_nbt_type_v<T>) d.emplace_back(i);
+				else d.emplace_back(NBTTypeCompat<T>::toNBT(i));
+			}
+		}
+		return *this;
+	}
 
-    template<>
-	struct NBTTypeCompat<bool> {
-		static NBT toNBT(const bool& b) { return static_cast<nbt_byte>(b); }
-		static bool fromNBT(const NBT& nbt) { return static_cast<bool>(nbt.asByte()); }
-		static bool nbtIs(const NBT& nbt) noexcept { return nbt.isByte(); }
-	};
+	template<typename T>
+	[[nodiscard]] std::enable_if_t<is_testable_nbt_type_v<T> || is_nbt_type_v<T>, bool> NBTList::is() const noexcept {
+		if constexpr (is_nbt_type_v<T>) return is<nbt_tag_type<T>>();
+		else return std::visit<bool>([](const auto& dataVec) {
+			return std::all_of(dataVec.begin(), dataVec.end(), [](const NBT& nbt) -> bool {
+				return NBTTypeCompat<T>::nbtIs(nbt);
+			});
+		}, data);
+	}
 
-}
+	template<typename T>
+	[[nodiscard]] std::enable_if_t<is_convertible_from_nbt_v<T> || is_nbt_type_v<T>, std::vector<T>> NBTList::get() const {
+		if constexpr (is_nbt_type_v<T>) {
+			return get<nbt_tag_type<T>>();
+		} else {
+			return std::visit<std::vector<T>>([](const auto& list) -> std::vector<T> {
+				std::vector<T> result {};
+				const size_t listSize = list.size();
+				result.resize(listSize);
+				for (size_t i = 0; i < listSize; i++)
+					result[i] = NBTTypeCompat<T>::fromNBT(list[i]);
+				return result;
+			}, data);
+		}
+	}
 
-namespace nbt {
+	template<typename T, typename... Args>
+	std::enable_if_t<is_nbt_type_v<T>, std::vector<T>&> NBTList::emplaceList(Args&&... args) {
+		return data.emplace<std::vector<T>>(std::forward<Args>(args)...);
+	}
+	template<typename T, typename U, typename... Args>
+	std::enable_if_t<is_nbt_type_v<T>, std::vector<T>&> NBTList::emplaceList(std::initializer_list<U> initList, Args&&... args) {
+		return data.emplace<std::vector<T>>(initList, std::forward<Args>(args)...);
+	}
+	template<TagType tagType, typename... Args>
+	std::vector<nbt_type<tagType>>& NBTList::emplaceList(Args&&... args) {
+		return data.emplace<std::vector<nbt_type<tagType>>>(std::forward<Args>(args)...);
+	}
+	template<TagType tagType, typename U, typename... Args>
+	std::vector<nbt_type<tagType>>& NBTList::emplaceList(std::initializer_list<U> initList, Args&&... args) {
+		return data.emplace<std::vector<nbt_type<tagType>>>(initList, std::forward<Args>(args)...);
+	}
 
-    template<typename T>
+
+	template<typename T>
 	std::enable_if_t<(is_testable_nbt_type_v<T> || is_nbt_type_v<T>), bool>
 	NBTCompound::hasKey(const nbt_string_view key) const {
 		const auto it = data.find(key);
@@ -403,3 +589,5 @@ namespace nbt {
 }
 
 #include "MiscNBTCompat.h"
+
+#endif

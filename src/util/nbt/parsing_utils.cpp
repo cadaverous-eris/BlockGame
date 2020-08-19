@@ -7,13 +7,89 @@
 #include <functional>
 #include <limits>
 #include <cmath>
-#include <sstream>
+
+#include <fmt/core.h>
 
 #include "NBT.h"
+#include "util/math/bytes.h"
 #include "util/text/text_utils.h"
 #include "util/text/unicode_utils.h"
 
 namespace nbt::parsing {
+
+	// binary NBT parsing
+
+	NBT parseNBT(std::span<unsigned char> bytes) {
+		using std::stack, std::reference_wrapper;
+
+		stack<reference_wrapper<NBT>> nbtStack {};
+		size_t pos { 0 };
+
+		while (pos < bytes.size()) {
+			auto& stackTop = nbtStack.top().get();
+            const bool parsingByteArray = stackTop.is<TagByteArray>();
+			const bool parsingList = stackTop.is<TagList>();
+			const bool parsingCompound= stackTop.is<TagCompound>();
+            const bool parsingIntArray = stackTop.is<TagIntArray>();
+            const bool parsingLongArray = stackTop.is<TagLongArray>();
+            const bool parsingTypedArray = parsingByteArray || parsingIntArray || parsingLongArray;
+
+			const TagType tagType { bytes[pos++] };
+
+			switch (tagType) {
+			case TagEnd:
+
+				break;
+			case TagByte:
+
+				break;
+            case TagShort:
+
+				break;
+            case TagInt:
+
+				break;
+            case TagLong:
+
+				break;
+            case TagFloat:
+
+				break;
+            case TagDouble:
+
+				break;
+            case TagByteArray:
+
+				break;
+            case TagString:
+
+				break;
+            case TagList:
+
+				break;
+            case TagCompound:
+
+				break;
+            case TagIntArray:
+
+				break;
+            case TagLongArray:
+
+				break;
+			default:
+				throw ParseError(fmt::format("Invalid NBT Tag: {}", getTagTypeId(tagType)));
+				break;
+			}
+
+
+
+		}
+
+		throw ParseError("NBT data ended unexpectedly");
+	}
+
+
+	// SNBT parsing
 
 	struct StringPos {
 		const size_t line, col;
@@ -40,13 +116,12 @@ namespace nbt::parsing {
 
 	static std::string createParseErrorString(const std::string_view str, const size_t pos, const std::string& what) {
 		const StringPos errorPos = calculateStringPos(str, pos);
-		std::ostringstream sstr {};
-		sstr << what << '\n';
-		sstr << "(line " << errorPos.line << ", col " << errorPos.col << ')';
-		return sstr.str();
+		return fmt::format("{}\n(line {}, col {})", what, errorPos.line, errorPos.col);
 	}
 	ParseError::ParseError(const std::string_view str, const size_t pos, const std::string& what) :
 			std::runtime_error(createParseErrorString(str, pos, what)) {}
+	ParseError::ParseError(const std::string& what) :
+			std::runtime_error(what) {}
 
 	static constexpr std::string_view whitespace_chars = "\x09\x0A\x0B\x0C\x0D\x20";
 
@@ -266,7 +341,7 @@ namespace nbt::parsing {
 			if ((digitChar >= '0') && (digitChar <= '9')) {
 				digits++;
                 // TODO: throw exception if value of literal would be too high or low for the type
-				value = (value * 10) + (digitChar - '0');
+				value = (value * 10) + static_cast<Int>(digitChar - '0');
 			} else {
 				break;
 			}
@@ -302,13 +377,17 @@ namespace nbt::parsing {
 			throw ParseError(str, pos, "Invalid number literal");
         std::string_view valString = str.substr(pos, endIndex - pos);
 
-        if (valString == nan_string) {
-			pos = endIndex;
+        if (valString.starts_with(nan_string)) {
+			pos += nan_string.length();
+			if ((validSuffixChars.length() > 0) && (validSuffixChars.find_first_of(str[pos]) != npos))
+				pos += 1;
 			Float value = std::numeric_limits<Float>::quiet_NaN();
 			return isNegative ? -value : value;
 		}
-		if (valString == infinity_string) {
-			pos = endIndex;
+		if (valString.starts_with(infinity_string)) {
+			pos += infinity_string.length();
+			if ((validSuffixChars.length() > 0) && (validSuffixChars.find_first_of(str[pos]) != npos))
+				pos += 1;
 			Float value = std::numeric_limits<Float>::infinity();
 			return isNegative ? -value : value;
 		}
@@ -429,7 +508,7 @@ namespace nbt::parsing {
             if (suffix == 'd' || suffix == 'D')
                 return parseFloatingPoint<nbt_double>(str, pos, "dD"sv);
         }
-        const bool isFloatingPoint = str.substr(pos, endIndex).find_first_of(".eEn"sv) != npos; // the 'n' catches both 'nan' and 'inf';
+        const bool isFloatingPoint = str.substr(pos, endIndex - pos).find_first_of(".eEn"sv) != npos; // the 'n' catches both 'nan' and 'inf';
         if (isFloatingPoint)
             return parseFloatingPoint<nbt_double>(str, pos, "dD"sv);
         else
@@ -445,8 +524,32 @@ namespace nbt::parsing {
 
 	    NBT result {};
 		stack<reference_wrapper<NBT>> nbtStack { { result } };
+		stack<NBT> currentListItemStack {};
 		ParserState parserState = ParserState::Value;
 		size_t pos = 0;
+
+		const auto nbtStackPop = [&nbtStack, &currentListItemStack, &str, &pos] {
+			const auto& popped = nbtStack.top().get();
+			nbtStack.pop();
+			if (!currentListItemStack.empty() && (&popped == &currentListItemStack.top())) {
+				auto& top = nbtStack.top().get();
+				NBT& currentListItem = currentListItemStack.top();
+				if (!top.isList())
+					throw ParseError(str, pos, "Parsed value was stored on list stack, but the container value is not a list");
+				nbt_list& list = top.asList();
+				if (list.empty())
+					list.emplaceListOfTagType(popped.getTagType());
+				else if (currentListItem.getTagType() != list.getTagType())
+					throw ParseError(str, pos, fmt::format("List of type {} cannot accept value of type {}", to_string(list.getTagType()), to_string(currentListItem.getTagType())));
+				std::visit([&currentListItem](auto& l) {
+					using ListVal = typename std::decay_t<decltype(l)>::value_type;
+					constexpr TagType listType = nbt_tag_type<ListVal>;
+					l.emplace_back(std::move(currentListItem.as<listType>()));
+				}, list.asListVariant());
+				currentListItemStack.pop();
+			}
+		};
+
 		while ((pos != npos) && (pos < str.size()) && !nbtStack.empty()) {
 			pos = str.find_first_not_of(whitespace_chars, pos);
 			if (pos == npos) break;
@@ -457,13 +560,13 @@ namespace nbt::parsing {
 			const bool parsingCompound= stackTop.is<TagCompound>();
             const bool parsingIntArray = stackTop.is<TagIntArray>();
             const bool parsingLongArray = stackTop.is<TagLongArray>();
-            const bool parsingTypedArray = parsingByteArray || parsingIntArray || parsingLongArray;
+            const bool parsingIntegerArray = parsingByteArray || parsingIntArray || parsingLongArray;
 
 			if (parserState == ParserState::Key) {
 				if (currentChar == '}') {
 					if (!parsingCompound)
 						throw ParseError(str, pos, "Unexpected token '}', expected key");
-					nbtStack.pop();
+					nbtStackPop();
 					pos++;
 					parserState = ParserState::Comma;
 					continue;
@@ -483,9 +586,9 @@ namespace nbt::parsing {
 				}
 			} else if (parserState == ParserState::Value) {
 				if (currentChar == ']') {
-					if (!parsingList && !parsingTypedArray)
+					if (!parsingList && !parsingIntegerArray)
 						throw ParseError(str, pos, "Unexpected token ']', expected value");
-					nbtStack.pop();
+					nbtStackPop();
 					pos++;
 					parserState = ParserState::Comma;
 					continue;
@@ -514,8 +617,8 @@ namespace nbt::parsing {
                 }
 
 				if (parsingList) {
-					nbt_list& list = nbtStack.top().get().as<TagList>();
-					nbtStack.push(list.emplace_back());
+					currentListItemStack.emplace();
+					nbtStack.push(currentListItemStack.top());
 				}
 
 				if (currentChar == '{') {
@@ -546,7 +649,7 @@ namespace nbt::parsing {
 				}
 				if ((currentChar == '\'') || (currentChar == '"')) {
 					nbtStack.top().get().emplace<TagString>(parseString(str, pos, currentChar));
-					nbtStack.pop();
+					nbtStackPop();
 					parserState = ParserState::Comma;
 					continue;
 				}
@@ -555,11 +658,11 @@ namespace nbt::parsing {
 					(currentChar == nan_string[0]) || (currentChar == infinity_string[0])
 				) {
 					const auto parsedNumberVariant = parseNumber(str, pos);
-                    std::visit([&nbtStack](auto parsedNumber) {
+                    std::visit([&nbtStack](const auto& parsedNumber) {
                         using T = std::remove_cv_t<std::remove_reference_t<decltype(parsedNumber)>>;
                         nbtStack.top().get().emplace<T>(parsedNumber);
                     }, parsedNumberVariant);
-                    nbtStack.pop();
+                    nbtStackPop();
                     parserState = ParserState::Comma;
 					continue;
 					//throw ParseError(str, pos, "Invalid number literal");
@@ -567,13 +670,13 @@ namespace nbt::parsing {
 				throw ParseError(str, pos, "Unexpected token '"s + currentChar + "', expected value"s);
 			} else if (parserState == ParserState::Comma) {
 				if (parsingCompound && (currentChar == '}')) {
-					nbtStack.pop();
+					nbtStackPop();
 					pos++;
 					parserState = ParserState::Comma;
 					continue;
 				}
-				if ((parsingList || parsingTypedArray) && (currentChar == ']')) {
-					nbtStack.pop();
+				if ((parsingList || parsingIntegerArray) && (currentChar == ']')) {
+					nbtStackPop();
 					pos++;
 					parserState = ParserState::Comma;
 					continue;
@@ -581,7 +684,7 @@ namespace nbt::parsing {
 				if (currentChar == ',') {
 					pos++;
 					if (parsingCompound) parserState = ParserState::Key;
-					else if (parsingList || parsingTypedArray) parserState = ParserState::Value;
+					else if (parsingList || parsingIntegerArray) parserState = ParserState::Value;
 					else throw ParseError(str, pos, "Invalid parser state (cannot be in state ParserState::Comma while outside of compound, list, or typed array)");
 				} else {
 					throw ParseError(str, pos, "Expected ',', found '"s + currentChar + "' instead"s);

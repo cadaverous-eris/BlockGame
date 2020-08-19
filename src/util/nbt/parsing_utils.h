@@ -2,6 +2,7 @@
 
 #include <optional>
 #include <string>
+#include <span>
 #include <stdexcept>
 
 #include "nbt_types.h"
@@ -19,8 +20,11 @@ namespace nbt::parsing {
 
 	struct ParseError : std::runtime_error {
 		ParseError(const std::string_view str, const size_t pos, const std::string& what);
+		ParseError(const std::string& what);
 	};
 
+
+	NBT parseNBT(std::span<unsigned char> bytes);
 
 	NBT parseSNBT(std::string_view str);
 

@@ -31,21 +31,21 @@ namespace eng {
 		world.setPlayer(&camera);
 		world.setWorldRenderer(&worldRenderer);
 
-		bool parsedSNBT = false;
-		nbt::NBT nbt {};
-		const std::string inputSNBT =
-			R"({ "awdd": 13b, "aw": 16d, a: 198f,'BA':[B; 32, 16, 127, -4, 255, 3], "B": -1.34, "c": { "awd": 23, "adw": 35L, "ls": [ "adawafaf", -12s, 2, [I; 23, -344, 232, 45, ] ] }, })";
-		try {
-			nbt = nbt::parseSNBT(inputSNBT);
-			parsedSNBT = true;
-		} catch(const nbt::ParseError& parseError) {
-			std::cerr << '\n' << "Error parsing SNBT:" << '\n';
-			std::cerr << parseError.what() << '\n' << '\n';
-		}
-		if (parsedSNBT) {
-			nbt.asCompound().at<nbt::TagByteArray>("BA").emplace_back(0xFF);
-			std::cout << '\n' << nbt.toSNBT() << '\n' << '\n';
-		}
+		//bool parsedSNBT = false;
+		//nbt::NBT nbt {};
+		//const std::string inputSNBT =
+		//	R"({ "awdd": 13b, "aw": 16d, a: 198f,'BA':[B; 32, 16, 127, -4, 255, 3], "B": -1.34, rstsr: [ "awdwd", 'adwa', "awawd" ], empty_list: [], ll: [[1], [0.5f, -inff, nanf, 0.002f]], elll: [[[[[]]]]],"c": { "awd": 23, "adw": 35L, "ls": [ { str: "adawafaf" }, { s: -12s, i: 2, }, { ia: [I; 23, -344, 232, 45, ], f: 0.04 } ] }, })";
+		//try {
+		//	nbt = nbt::parseSNBT(inputSNBT);
+		//	parsedSNBT = true;
+		//} catch(const nbt::ParseError& parseError) {
+		//	std::cerr << '\n' << "Error parsing SNBT:" << '\n';
+		//	std::cerr << parseError.what() << '\n' << '\n';
+		//}
+		//if (parsedSNBT) {
+		//	nbt.asCompound().at<nbt::TagByteArray>("BA").emplace_back(0xFF);
+		//	std::cout << '\n' << nbt.toSNBT(2) << '\n' << '\n';
+		//}
 
 		// Vertex Array setup
 		//vao.bind(); // bind the VAO
@@ -59,7 +59,7 @@ namespace eng {
 			}
 		}*/
 		//vbo.setData(quads, sizeof(quads));
-		//vbo.setData(std::begin(quads), std::end(quads));
+		//vbo.setData(std::span<BlockQuad>(std::begin(quads), std::end(quads)));
 
 		// make sure the vbo is bound when setting up vertex attributes
 		//vbo.bind();

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef NBT_TYPES_H
+#define NBT_TYPES_H
 
 #include <cstdint>
 #include <vector>
@@ -9,6 +10,7 @@
 namespace nbt {
 
     class NBT;
+    class NBTList;
 	class NBTCompound;
 
     using nbt_value = NBT;
@@ -21,7 +23,7 @@ namespace nbt {
     using nbt_byte_array = std::vector<nbt_byte>;
     using nbt_string = std::string;
     using nbt_string_view = std::string_view;
-    using nbt_list = std::vector<nbt_value>;
+    using nbt_list = NBTList;
     using nbt_compound = NBTCompound;
     using nbt_int_array = std::vector<nbt_int>;
     using nbt_long_array = std::vector<nbt_long>;
@@ -55,31 +57,11 @@ namespace nbt {
     inline constexpr TagType TagIntArray = TagType::IntArray;
     inline constexpr TagType TagLongArray = TagType::LongArray;
 
+    std::string to_string(const TagType& tagType);
     std::ostream& operator <<(std::ostream&, const TagType&);
 
     inline constexpr int getTagTypeId(TagType tagType) noexcept {
         return static_cast<int>(tagType);
-    }
-
-    // returns -1 if the size is encoded in the tag data
-    constexpr int getPayloadSize(TagType tagType) noexcept {
-        switch (tagType) {
-            case TagEnd: return 0;
-            case TagByte: return 1;
-            case TagShort: return 2;
-            case TagInt: return 4;
-            case TagLong: return 8;
-            case TagFloat: return 4;
-            case TagDouble: return 8;
-            case TagByteArray:
-            case TagString:
-            case TagList:
-            case TagCompound:
-            case TagIntArray:
-            case TagLongArray:
-                return -1;
-        }
-        return 0;
     }
 
 
@@ -128,4 +110,28 @@ namespace nbt {
     template<> struct is_nbt_type<nbt_type<TagLongArray>> : std::true_type {};
 	template<typename T> inline constexpr bool is_nbt_type_v = is_nbt_type<T>::value;
 
+
+    // returns -1 if the size is encoded in the tag data
+    constexpr size_t getPayloadSize(TagType tagType) noexcept {
+        switch (tagType) {
+            case TagEnd: return 0;
+            case TagByte: return sizeof(nbt_type<TagByte>);
+            case TagShort: return sizeof(nbt_type<TagShort>);
+            case TagInt: return sizeof(nbt_type<TagInt>);
+            case TagLong: return sizeof(nbt_type<TagLong>);
+            case TagFloat: return sizeof(nbt_type<TagFloat>);
+            case TagDouble: return sizeof(nbt_type<TagDouble>);
+            case TagByteArray:
+            case TagString:
+            case TagList:
+            case TagCompound:
+            case TagIntArray:
+            case TagLongArray:
+                return size_t(-1);
+        }
+        return 0;
+    }
+
 }
+
+#endif

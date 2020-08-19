@@ -1,6 +1,8 @@
-#pragma once
+#ifndef NBT_COMPOUND_H
+#define NBT_COMPOUND_H
 
 #include <map>
+#include <iostream>
 #include <optional>
 
 #include "nbt_types.h"
@@ -9,7 +11,11 @@
 
 namespace nbt {
 
+    class NBTCompound;
+    std::ostream& operator <<(std::ostream&, const NBTCompound&);
+
     class NBT;
+    class NBTList;
 
     class NBTCompound {
     public:
@@ -64,12 +70,11 @@ namespace nbt {
         bool operator ==(const NBTCompound& b) const;
 		bool operator !=(const NBTCompound& b) const;
 
-		explicit operator map_type() const { return data; }
+		explicit inline operator map_type() const { return data; }
 
-        [[nodiscard]] bool empty() const noexcept;
-		size_type size() const noexcept;
-		size_type max_size() const noexcept;
-		size_type maxSize() const noexcept;
+        [[nodiscard]] inline bool empty() const noexcept { return data.empty(); }
+		inline size_type size() const noexcept { return data.size(); }
+		inline size_type max_size() const noexcept { return data.max_size(); }
 
         bool hasKey(const nbt_string_view key) const;
 		bool hasKey(const nbt_string_view key, const TagType tagType) const;
@@ -158,4 +163,8 @@ namespace nbt {
 
 }
 
+#endif
+
+// Some templated member functions of NBTCompound are defined in NBT.h, so it must
+// be included incase this header is included in a file that doesn't include NBT.h
 #include "NBT.h"

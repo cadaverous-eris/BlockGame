@@ -19,11 +19,6 @@ namespace nbt {
 	bool NBTCompound::operator ==(const NBTCompound& b) const { return data == b.data; }
 	bool NBTCompound::operator !=(const NBTCompound& b) const { return data != b.data; }
 
-    bool NBTCompound::empty() const noexcept { return data.empty(); }
-	NBTCompound::size_type NBTCompound::size() const noexcept { return data.size(); }
-	NBTCompound::size_type NBTCompound::max_size() const noexcept { return data.max_size(); }
-	NBTCompound::size_type NBTCompound::maxSize() const noexcept { return data.max_size(); }
-
 	bool NBTCompound::hasKey(const nbt_string_view key) const {
 		return data.find(key) != data.end();
 	}
@@ -155,6 +150,10 @@ namespace nbt {
 		}
 		sstr.put('}');
 		return sstr.str();
+	}
+
+	std::ostream& operator <<(std::ostream& os, const NBTCompound& j) {
+		return os << j.toSNBT();
 	}
 
 }

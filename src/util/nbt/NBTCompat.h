@@ -1,4 +1,5 @@
-#pragma once
+#ifndef NBT_COMPAT_H
+#define NBT_COMPAT_H
 
 #include <type_traits>
 
@@ -16,7 +17,7 @@ namespace nbt {
 	template<typename T>
 	struct is_convertible_to_nbt<T, std::enable_if_t<
 		(!std::is_pointer_v<T> || std::is_null_pointer_v<T>) &&
-		std::is_same_v<decltype(NBTTypeCompat<T>::toNBT(std::declval<T>())), NBT>
+		is_nbt_type_v<decltype(NBTTypeCompat<T>::toNBT(std::declval<T>()))>
 	>> : std::true_type {};
 	template<typename T>
 	inline constexpr bool is_convertible_to_nbt_v = is_convertible_to_nbt<T>::value;
@@ -43,4 +44,20 @@ namespace nbt {
 	template<typename T>
 	inline constexpr bool is_testable_nbt_type_v = is_testable_nbt_type<T>::value;
 
+
+	template<typename T, typename = void>
+	struct to_nbt_conversion_result_type {};
+	template<typename T>
+	struct to_nbt_conversion_result_type<T, std::enable_if_t<is_convertible_to_nbt_v<T>>> {
+		using type = decltype(NBTTypeCompat<T>::toNBT(std::declval<T>()));
+	};
+	template<typename T>
+	struct to_nbt_conversion_result_type<T, std::enable_if_t<is_nbt_type_v<T>>> {
+		using type = T;
+	};
+	template<typename T>
+	using to_nbt_conversion_result_type_t = typename to_nbt_conversion_result_type<T>::type;
+
 }
+
+#endif
