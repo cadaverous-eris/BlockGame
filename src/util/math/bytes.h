@@ -64,7 +64,7 @@ namespace eng {
 		std::memcpy(&t, &b, S); // use std::memcpy to avoid undefined behavior
 		return t;
 	}
-    template<typename T, size_t S = sizeof(T), typename Span = std::span<unsigned char, S>, std::enable_if_t<((std::is_integral_v<T> || std::is_floating_point_v<T>) && !std::is_same_v<bool, T> && ((S == 1) || (S == 2) || (S == 4) || (S == 8))), int> = 0>
+    template<typename T, size_t S = sizeof(T), typename Span = std::span<const unsigned char, S>, std::enable_if_t<((std::is_integral_v<T> || std::is_floating_point_v<T>) && (!std::is_same_v<bool, T>) && ((S == 1) || (S == 2) || (S == 4) || (S == 8))), int> = 0>
 	constexpr T fromByteSpan(const Span& b) noexcept {
 		T t;
 		std::memcpy(&t, b.data(), S); // use std::memcpy to avoid undefined behavior
@@ -84,20 +84,20 @@ namespace eng {
 	constexpr T fromBigEndianUintBytes(const Uint& b) noexcept {
 		static_assert((std::endian::native == std::endian::big) || (std::endian::native == std::endian::little));
 		if constexpr ((std::endian::native == std::endian::big) || (S == 1)) {
-			return fromUnsignedIntBytes(b);
+			return fromUnsignedIntBytes<T>(b);
 		} else {
-			return fromUnsignedIntBytes(flipBytes(b));
+			return fromUnsignedIntBytes<T>(flipBytes(b));
 		}
 	}
-    template<typename T, size_t S = sizeof(T), typename Span = std::span<unsigned char, S>, typename Uint = sized_uint_t<S>, std::enable_if_t<((std::is_integral_v<T> || std::is_floating_point_v<T>) && !std::is_same_v<bool, T>), int> = 0>
+    template<typename T, size_t S = sizeof(T), typename Span = std::span<const unsigned char, S>, typename Uint = sized_uint_t<S>, std::enable_if_t<((std::is_integral_v<T> || std::is_floating_point_v<T>) && !std::is_same_v<bool, T>), int> = 0>
 	constexpr T fromBigEndianByteSpan(const Span& b) noexcept {
 		static_assert((std::endian::native == std::endian::big) || (std::endian::native == std::endian::little));
         if constexpr ((std::endian::native == std::endian::big) || (S == 1)) {
-			return fromByteSpan(b);
+			return fromByteSpan<T>(b);
 		} else {
             Uint u;
 	        std::memcpy(&u, b.data(), S);
-			return fromUnsignedIntBytes(flipBytes(u));
+			return fromUnsignedIntBytes<T>(flipBytes(u));
 		}
 	}
 

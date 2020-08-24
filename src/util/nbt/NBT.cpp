@@ -3,10 +3,13 @@
 #include <utility>
 #include <sstream>
 #include <algorithm>
+#include <stack>
+#include <vector>
 
 #include <fmt/core.h>
 
 #include "parsing_utils.h"
+#include "util/math/bytes.h"
 
 namespace nbt {
 
@@ -372,27 +375,27 @@ namespace nbt {
     std::string NBT::toSNBT(const size_t indentAmount, const char indentChar, const size_t indentLevel) const {
 		using namespace std::string_view_literals;
 		if (isByte()) {
-            return fmt::format("{:d}b", asByte());
+            return fmt::format("{:d}B", asByte());
 		} else if (isShort()) {
-			return fmt::format("{}s", asShort());
+			return fmt::format("{}S", asShort());
 		} else if (isInt()) {
 			return fmt::format("{}", asInt());
 		} else if (isLong()) {
-			return fmt::format("{}l", asLong());
+			return fmt::format("{}L", asLong());
 		} else if (isFloat()) {
 			const nbt_float val = asFloat();
 			if (val != val)
                 return std::string(parsing::nan_string) + 'f';
 			if (std::isinf(val))
-				return ((val < 0) ? ('-' + std::string(parsing::infinity_string)) : std::string(parsing::infinity_string)) + 'f';
-			return fmt::format("{}f", val);
+				return ((val < 0) ? ('-' + std::string(parsing::infinity_string)) : std::string(parsing::infinity_string)) + 'F';
+			return fmt::format("{}F", val);
 		} else if (isDouble()) {
 			const nbt_double val = asDouble();
 			if (val != val)
                 return std::string(parsing::nan_string) + 'd';
 			if (std::isinf(val))
-				return ((val < 0) ? ('-' + std::string(parsing::infinity_string)) : std::string(parsing::infinity_string)) + 'd';
-			return fmt::format("{}d", val);
+				return ((val < 0) ? ('-' + std::string(parsing::infinity_string)) : std::string(parsing::infinity_string)) + 'D';
+			return fmt::format("{}D", val);
 		} else if (isByteArray()) {
 			return stringifyNBTIntegerArray<nbt_byte_array, 'B'>(asByteArray(), indentAmount, indentChar, indentLevel);
 		} else if (isString()) {
@@ -411,6 +414,79 @@ namespace nbt {
 
 	std::ostream& operator <<(std::ostream& os, const NBT& j) {
 		return os << j.toSNBT();
+	}
+
+
+	inline void writeTagType(std::vector<unsigned char> bytes, const TagType& tagType) {
+		bytes.emplace_back(static_cast<unsigned char>(getTagTypeId(tagType)));
+	}
+	template<TagType tagType, typename T = nbt_type<tagType>, typename Uint = eng::sized_uint_t<sizeof(T)>, std::enable_if_t<std::is_arithmetic_v<T>, int> = 0>
+	void writeNumericBytes(std::vector<unsigned char> bytes, const T& n) {
+		const Uint u = eng::toBigEndianUintBytes(n);
+		const auto vecSize = bytes.size();
+		bytes.resize(vecSize + sizeof(Uint));
+		std::memcpy(bytes.data() + vecSize, &u, sizeof(Uint));
+	}
+	template<TagType tagType, typename T = nbt_type<tagType>, typename ValType = typename T::value_type, std::enable_if_t<((tagType == TagByteArray) || (tagType == TagIntArray) || (tagType == TagLongArray)), int> = 0>
+	void writeIntegerArrayBytes(std::vector<unsigned char> bytes, const T& t) {
+		const nbt_int length = static_cast<nbt_int>(t.size());
+		constexpr size_t valSize = sizeof(ValType);
+		writeNumericBytes<TagInt>(bytes, length);
+		if constexpr (tagType == TagByteArray) {
+			const auto vecSize = bytes.size();
+			bytes.resize(vecSize + (length * valSize));
+			std::memcpy(bytes.data() + vecSize, t.data(), length * valSize);
+		} else {
+			bytes.reserve(bytes.size() + (length * valSize));
+			for (const auto& val : t)
+				writeNumericBytes<ValType>(bytes, val);
+		}
+	}
+	void writeStringBytes(std::vector<unsigned char> bytes, nbt_string_view s) {
+		using CharType = typename nbt_string::value_type;
+		static_assert(sizeof(CharType) == 1);
+		const nbt_short length = static_cast<nbt_short>(s.size());
+		writeNumericBytes<TagShort>(bytes, length);
+		const auto vecSize = bytes.size();
+		bytes.resize(vecSize + static_cast<size_t>(length));
+		std::memcpy(bytes.data() + vecSize, s.data(), static_cast<size_t>(length));
+	}
+
+	std::vector<unsigned char> NBT::toBinary(nbt_string_view name) const {
+		using std::stack, std::reference_wrapper, std::vector;
+
+		struct State {
+			const NBT* nbt;
+			const NBTList* listList = nullptr;
+			const NBTCompound* listCompound = nullptr;
+			std::variant<size_t, NBTCompound::const_iterator> pos = size_t{0};
+			std::variant<size_t, NBTCompound::const_iterator> end = size_t{0};
+			TagType listType = TagEnd;
+		};
+
+		vector<unsigned char> bytes;
+
+		stack<State> stateStack {};
+		if (this->isList()) {
+			const auto& list = this->asList();
+			stateStack.emplace(nullptr, &list, nullptr, 0, list.size(), list.getTagType());
+		} else if (this->isCompound()) {
+			const auto& compound = this->asCompound();
+			stateStack.emplace(nullptr, nullptr, &compound, compound.begin(), compound.end());
+		} else {
+			stateStack.emplace(this);
+		}
+
+		while (!stateStack.empty()) {
+			// TODO: implement
+			assert(false);
+
+
+
+
+		}
+
+		return bytes;
 	}
 
 }

@@ -15,6 +15,7 @@
 #include "util/resources/Image.h"
 #include "util/resources/ResourceManager.h"
 #include "util/nbt/NBT.h" // TODO: remove
+#include "util/IOUtils.h" // TODO: remove
 
 #include <iostream> // TODO: remove
 
@@ -46,6 +47,31 @@ namespace eng {
 		//	nbt.asCompound().at<nbt::TagByteArray>("BA").emplace_back(0xFF);
 		//	std::cout << '\n' << nbt.toSNBT(2) << '\n' << '\n';
 		//}
+
+		//std::cout << '\n';
+		//const std::string nbtFilePath = "bigtest.nbt";//"test.nbt";
+		//const auto fileData = readCompressedBinaryFile(nbtFilePath);//readBinaryFile(nbtFilePath);
+		//std::cout << "Uncompressed size of '" << nbtFilePath << "': " << fileData.size() << '\n';
+		//bool parsedNBT = false;
+		//nbt::NBT nbt {};
+		//try {
+		//	nbt = nbt::parseNBT(std::span<const unsigned char>(fileData.data(), fileData.size()));
+		//	parsedNBT = true;
+		//} catch(const nbt::ParseError& parseError) {
+		//	std::cerr << '\n' << "Error parsing NBT:" << '\n';
+		//	std::cerr << parseError.what() << '\n' << '\n';
+		//}
+		//const std::string snbtFilePath = "test.snbt";
+		//if (parsedNBT) {
+		//	writeTextFile(snbtFilePath, nbt.toSNBT(2));
+		//	std::cout << '\n' << "Successfully parsed " << nbtFilePath << ", SNBT written to " << snbtFilePath << '\n' << '\n';
+		//	//std::cout << '\n' << nbt.toSNBT(2) << '\n' << '\n';
+		//}
+
+		//std::vector<Color> testByteVec { {}, color::aquamarine, color::black, };
+		//std::vector<uint64_t> testByteVec { 0x00, 0x01, 0xFF, 0x7D, 0x7F, };
+		//nbt::NBT testNbt = testByteVec;
+		//std::cout << '\n' << testNbt.getTagType() << '\n' << /*testNbt.is<std::vector<Color>>() <<*/ '\n' << '\n';
 
 		// Vertex Array setup
 		//vao.bind(); // bind the VAO

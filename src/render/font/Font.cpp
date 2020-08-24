@@ -84,8 +84,8 @@ namespace eng {
 	Font Font::loadFont(const std::string& filePath, std::initializer_list<std::string> fallbackPaths) {
 		std::vector<FontData> fallbackFonts;
 		for (const auto& fPath : fallbackPaths)
-			fallbackFonts.emplace_back(readFileBytes("res/fonts/" + fPath));
-		return Font({ readFileBytes("res/fonts/" + filePath) }, std::move(fallbackFonts));
+			fallbackFonts.emplace_back(readBinaryFile("res/fonts/" + fPath));
+		return Font({ readBinaryFile("res/fonts/" + filePath) }, std::move(fallbackFonts));
 	}
 
 	const Texture& Font::getTexture() const noexcept { return texture; }

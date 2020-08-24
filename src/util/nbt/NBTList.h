@@ -34,6 +34,20 @@ namespace nbt {
             vector<nbt_int_array>,
             vector<nbt_long_array>
 		>;
+        static inline constexpr auto variant_index_tag_types = std::to_array<TagType>({
+			TagByte,
+			TagShort,
+			TagInt,
+			TagLong,
+			TagFloat,
+			TagDouble,
+			TagByteArray,
+			TagString,
+			TagList,
+			TagCompound,
+			TagIntArray,
+			TagLongArray,
+		});
 
 		variant_type data;
 

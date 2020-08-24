@@ -25,8 +25,15 @@ namespace nbt {
 	template<typename T>
 	struct NBTTypeCompat<std::vector<T>> {
 		using Vec = std::vector<T>;
+        template<typename U>
+        using to_nbt_type = std::enable_if_t<(is_convertible_from_nbt_v<U> || is_nbt_type_v<U>), std::conditional_t<
+            !(std::is_same_v<U, nbt_byte> || std::is_same_v<U, uint8_t> || std::is_same_v<U, unsigned char>), std::conditional_t<
+                !(std::is_same_v<U, nbt_int> || std::is_same_v<U, uint32_t>), std::conditional_t<
+                    !(std::is_same_v<U, nbt_long> || std::is_same_v<U, uint64_t>),
+                        nbt_list , nbt_long_array >, nbt_int_array >, nbt_byte_array
+        >>;
         template<typename U = T>
-		static nbt_byte_array toNBT(const Vec& vec) requires (std::is_same_v<U, nbt_byte> || std::is_same_v<U, uint8_t> || std::is_same_v<U, unsigned char>) {
+		static to_nbt_type<U> toNBT(const Vec& vec) {
             if constexpr (std::is_same_v<U, nbt_byte>) {
                 return nbt_byte_array(vec.begin(), vec.end());
             } else if constexpr (std::is_same_v<U, uint8_t> || std::is_same_v<U, unsigned char>) {
@@ -35,11 +42,7 @@ namespace nbt {
                 for (size_t i = 0; i < vec.size(); i++)
                     nbtArr[i] = static_cast<nbt_byte>(vec[i]);
                 return nbtArr;
-            }
-        }
-        template<typename U = T>
-		static nbt_int_array toNBT(const Vec& vec) requires (std::is_same_v<U, nbt_int> || std::is_same_v<U, uint32_t>) {
-            if constexpr (std::is_same_v<U, nbt_int>) {
+            } else if constexpr (std::is_same_v<U, nbt_int>) {
                 return nbt_int_array(vec.begin(), vec.end());
             } else if constexpr (std::is_same_v<U, uint32_t>) {
                 nbt_int_array nbtArr {};
@@ -47,11 +50,7 @@ namespace nbt {
                 for (size_t i = 0; i < vec.size(); i++)
                     nbtArr[i] = static_cast<nbt_int>(vec[i]);
                 return nbtArr;
-            }
-        }
-        template<typename U = T>
-		static nbt_long_array toNBT(const Vec& vec) requires (std::is_same_v<U, nbt_long> || std::is_same_v<U, uint64_t>) {
-            if constexpr (std::is_same_v<U, nbt_long>) {
+            } else if constexpr (std::is_same_v<U, nbt_long>) {
                 return nbt_long_array(vec.begin(), vec.end());
             } else if constexpr (std::is_same_v<U, uint64_t>) {
                 nbt_long_array nbtArr {};
@@ -59,11 +58,9 @@ namespace nbt {
                 for (size_t i = 0; i < vec.size(); i++)
                     nbtArr[i] = static_cast<nbt_long>(vec[i]);
                 return nbtArr;
+            } else {
+                return nbt_list(vec.begin(), vec.end());
             }
-        }
-        template<typename U = T>
-		static nbt_list toNBT(const Vec& vec) requires (is_nbt_type_v<U> || is_convertible_to_nbt_v<U>) {
-            return nbt_list(vec.begin(), vec.end());
         }
 		template<typename U = T, std::enable_if_t<(is_convertible_from_nbt_v<U> || is_nbt_type_v<U>), int> = 0>
 		static Vec fromNBT(const NBT& nbt) {
@@ -122,8 +119,15 @@ namespace nbt {
 	template<typename T, size_t S>
 	struct NBTTypeCompat<std::array<T, S>> {
 		using Arr = std::array<T, S>;
+        template<typename U>
+        using to_nbt_type = std::enable_if_t<(is_convertible_from_nbt_v<U> || is_nbt_type_v<U>), std::conditional_t<
+            !(std::is_same_v<U, nbt_byte> || std::is_same_v<U, uint8_t> || std::is_same_v<U, unsigned char>), std::conditional_t<
+                !(std::is_same_v<U, nbt_int> || std::is_same_v<U, uint32_t>), std::conditional_t<
+                    !(std::is_same_v<U, nbt_long> || std::is_same_v<U, uint64_t>),
+                        nbt_list , nbt_long_array >, nbt_int_array >, nbt_byte_array
+        >>;
         template<typename U = T>
-		static nbt_byte_array toNBT(const Arr& arr) requires (std::is_same_v<U, nbt_byte> || std::is_same_v<U, uint8_t> || std::is_same_v<U, unsigned char>) {
+		static to_nbt_type<U> toNBT(const Arr& arr) {
             if constexpr (std::is_same_v<U, nbt_byte>) {
                 return nbt_byte_array(arr.begin(), arr.end());
             } else if constexpr (std::is_same_v<U, uint8_t> || std::is_same_v<U, unsigned char>) {
@@ -132,11 +136,7 @@ namespace nbt {
                 for (size_t i = 0; i < arr.size(); i++)
                     nbtArr[i] = static_cast<nbt_byte>(arr[i]);
                 return nbtArr;
-            }
-        }
-        template<typename U = T>
-		static nbt_int_array toNBT(const Arr& arr) requires (std::is_same_v<U, nbt_int> || std::is_same_v<U, uint32_t>) {
-            if constexpr (std::is_same_v<U, nbt_int>) {
+            } else if constexpr (std::is_same_v<U, nbt_int>) {
                 return nbt_int_array(arr.begin(), arr.end());
             } else if constexpr (std::is_same_v<U, uint32_t>) {
                 nbt_int_array nbtArr {};
@@ -144,11 +144,7 @@ namespace nbt {
                 for (size_t i = 0; i < arr.size(); i++)
                     nbtArr[i] = static_cast<nbt_int>(arr[i]);
                 return nbtArr;
-            }
-        }
-        template<typename U = T>
-		static nbt_long_array toNBT(const Arr& arr) requires (std::is_same_v<U, nbt_long> || std::is_same_v<U, uint64_t>) {
-            if constexpr (std::is_same_v<U, nbt_long>) {
+            } else if constexpr (std::is_same_v<U, nbt_long>) {
                 return nbt_long_array(arr.begin(), arr.end());
             } else if constexpr (std::is_same_v<U, uint64_t>) {
                 nbt_long_array nbtArr {};
@@ -156,11 +152,9 @@ namespace nbt {
                 for (size_t i = 0; i < arr.size(); i++)
                     nbtArr[i] = static_cast<nbt_long>(arr[i]);
                 return nbtArr;
+            } else {
+                return nbt_list(arr.begin(), arr.end());
             }
-        }
-        template<typename U = T>
-		static nbt_list toNBT(const Arr& arr) requires (is_nbt_type_v<U> || is_convertible_to_nbt_v<U>) {
-            return nbt_list(arr.begin(), arr.end());
         }
 		template<typename U = T, std::enable_if_t<(is_convertible_from_nbt_v<U> || is_nbt_type_v<U>), int> = 0>
 		static Arr fromNBT(const NBT& nbt) {
@@ -234,6 +228,13 @@ namespace nbt {
 	struct NBTTypeCompat<glm::vec<L, V, Q>> {
 		using T = glm::vec<L, V, Q>;
 		using value_type = V;
+        template<typename U>
+        using to_nbt_type = std::enable_if_t<(is_convertible_from_nbt_v<U> || is_nbt_type_v<U>), std::conditional_t<
+            !(std::is_same_v<U, nbt_byte> || std::is_same_v<U, uint8_t> || std::is_same_v<U, bool>), std::conditional_t<
+                !(std::is_same_v<U, nbt_int> || std::is_same_v<U, uint32_t>), std::conditional_t<
+                    !(std::is_same_v<U, nbt_long> || std::is_same_v<U, uint64_t>),
+                        nbt_list , nbt_long_array >, nbt_int_array >, nbt_byte_array
+        >>;
 		static constexpr bool is_value_t_byte = std::is_same_v<nbt_byte, value_type>;
         static constexpr bool is_value_t_short = std::is_same_v<nbt_short, value_type>;
         static constexpr bool is_value_t_int = std::is_same_v<nbt_int, value_type>;
@@ -241,20 +242,16 @@ namespace nbt {
 		static constexpr bool is_value_t_float = std::is_same_v<nbt_float, value_type>;
         static constexpr bool is_value_t_double = std::is_same_v<nbt_double, value_type>;
         template<typename U = value_type>
-		static nbt_byte_array toNBT(const T& vec) requires (std::is_same_v<U, nbt_byte> || std::is_same_v<U, uint8_t> || std::is_same_v<U, bool>) {
+		static to_nbt_type<U> toNBT(const T& vec) {
             if constexpr (std::is_same_v<U, nbt_byte>) {
                 return nbt_byte_array(&vec[0], &vec[0] + vec.length());
-            } else {
+            } else if constexpr (std::is_same_v<U, uint8_t> || std::is_same_v<U, bool>) {
                 nbt_byte_array nbtArr {};
                 nbtArr.resize(vec.length());
                 for (size_t i; i < vec.length(); i++)
                     nbtArr[i] = static_cast<nbt_byte>(vec[i]);
                 return nbtArr;
-            }
-        }
-        template<typename U = value_type>
-		static nbt_int_array toNBT(const T& vec) requires (std::is_same_v<U, nbt_int> || std::is_same_v<U, uint32_t>) {
-            if constexpr (std::is_same_v<U, nbt_int>) {
+            } else if constexpr (std::is_same_v<U, nbt_int>) {
                 return nbt_int_array(&vec[0], &vec[0] + vec.length());
             } else if constexpr (std::is_same_v<uint32_t, value_type>) {
                 nbt_int_array nbtArr {};
@@ -262,11 +259,7 @@ namespace nbt {
                 for (size_t i; i < vec.length(); i++)
                     nbtArr[i] = static_cast<nbt_int>(vec[i]);
                 return nbtArr;
-            }
-        }
-        template<typename U = value_type>
-		static nbt_long_array toNBT(const T& vec) requires (std::is_same_v<U, nbt_long> || std::is_same_v<U, uint64_t>) {
-            if constexpr (std::is_same_v<U, nbt_long>) {
+            } else if constexpr (std::is_same_v<U, nbt_long>) {
                 return nbt_long_array(&vec[0], &vec[0] + vec.length());
             } else if constexpr (std::is_same_v<uint64_t, value_type>) {
                 nbt_long_array nbtArr {};
@@ -274,11 +267,9 @@ namespace nbt {
                 for (size_t i; i < vec.length(); i++)
                     nbtArr[i] = static_cast<nbt_long>(vec[i]);
                 return nbtArr;
+            } else {
+                return nbt_list(&vec[0], &vec[0] + vec.length());
             }
-        }
-        template<typename U = value_type>
-		static nbt_list toNBT(const T& vec) requires (is_nbt_type_v<U> || is_convertible_to_nbt_v<U>) {
-            return nbt_list(&vec[0], &vec[0] + vec.length());
         }
 		static T fromNBT(const NBT& nbt) {
             if constexpr (is_value_t_byte || std::is_same_v<uint8_t, value_type> || std::is_same_v<bool, value_type>) {
@@ -330,17 +321,21 @@ namespace nbt {
             throw bad_nbt_cast();
 		}
 		static bool nbtIs(const NBT& nbt) noexcept {
-            if constexpr (is_value_t_byte || std::is_same_v<value_type, uint8_t> || std::is_same_v<value_type, unsigned char>) {
+            if constexpr (is_value_t_byte || std::is_same_v<value_type, uint8_t> || std::is_same_v<value_type, bool>) {
                 if (nbt.isByteArray() && (nbt.asByteArray().size() == eng::glm_type<T>::components)) return true;
+                if (nbt.isListOf<TagByte>() && (nbt.asListOf<TagByte>().size() == eng::glm_type<T>::components)) return true;
             } else if constexpr (is_value_t_int || std::is_same_v<value_type, uint32_t>) {
                 if (nbt.isIntArray() && (nbt.asIntArray().size() == eng::glm_type<T>::components)) return true;
+                if (nbt.isListOf<TagInt>() && (nbt.asListOf<TagInt>().size() == eng::glm_type<T>::components)) return true;
             } else if constexpr (is_value_t_long || std::is_same_v<value_type, uint64_t>) {
                 if (nbt.isLongArray() && (nbt.asLongArray().size() == eng::glm_type<T>::components)) return true;
+                if (nbt.isListOf<TagLong>() && (nbt.asListOf<TagLong>().size() == eng::glm_type<T>::components)) return true;
+            } else {
+                if (nbt.isList()) {
+                    const nbt_list& nbtList = nbt.asList();
+                    return (nbtList.size() == eng::glm_type<T>::components) && nbtList.is<value_type>();
+                }
             }
-			if (nbt.isList()) {
-				const nbt_list& nbtList = nbt.asList();
-                return (nbtList.size() == eng::glm_type<T>::components) && nbtList.is<value_type>();
-			}
             return false;
 		}
 	};

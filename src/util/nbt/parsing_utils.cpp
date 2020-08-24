@@ -19,73 +19,361 @@ namespace nbt::parsing {
 
 	// binary NBT parsing
 
-	NBT parseNBT(std::span<unsigned char> bytes) {
-		using std::stack, std::reference_wrapper;
+	class NBTParser {
+	public:
+		using NBTRef = std::reference_wrapper<NBT>;
 
-		stack<reference_wrapper<NBT>> nbtStack {};
+		struct State {
+			NBTRef payload;
+			TagType listType = TagByte;
+			size_t listLength = 0;
+		};
+
+		using StateStack = std::stack<State>;
+
+		template<size_t S = std::dynamic_extent>
+		using ByteSpan = std::span<const unsigned char, S>;
+
+	private:
+		ByteSpan<> bytes;
+		StateStack stateStack {};
+		std::stack<NBT> currentListItemStack {};
 		size_t pos { 0 };
 
-		while (pos < bytes.size()) {
-			auto& stackTop = nbtStack.top().get();
-            const bool parsingByteArray = stackTop.is<TagByteArray>();
-			const bool parsingList = stackTop.is<TagList>();
-			const bool parsingCompound= stackTop.is<TagCompound>();
-            const bool parsingIntArray = stackTop.is<TagIntArray>();
-            const bool parsingLongArray = stackTop.is<TagLongArray>();
-            const bool parsingTypedArray = parsingByteArray || parsingIntArray || parsingLongArray;
+	public:
+		NBTParser(ByteSpan<> bytes) : bytes(bytes) {}
 
-			const TagType tagType { bytes[pos++] };
+		NBT operator ()() {
+			if (bytes.empty())
+				throw ParseError("No data");
 
-			switch (tagType) {
-			case TagEnd:
+			NBT result(nbt_compound{});
+			stateStack.emplace(NBTRef(result));
 
-				break;
-			case TagByte:
+			size_t loops = 0;
+			while ((!stateStack.empty()) && (pos < bytes.size())) {
+				if ((++loops >= bytes.size()) || (loops == size_t(-1)))
+					throw ParseError(fmt::format("Too many parser iterations ({})", loops));
 
-				break;
-            case TagShort:
+				auto& stackTop = stateStack.top();
+				auto& currentPayload = stackTop.payload.get();
 
-				break;
-            case TagInt:
-
-				break;
-            case TagLong:
-
-				break;
-            case TagFloat:
-
-				break;
-            case TagDouble:
-
-				break;
-            case TagByteArray:
-
-				break;
-            case TagString:
-
-				break;
-            case TagList:
-
-				break;
-            case TagCompound:
-
-				break;
-            case TagIntArray:
-
-				break;
-            case TagLongArray:
-
-				break;
-			default:
-				throw ParseError(fmt::format("Invalid NBT Tag: {}", getTagTypeId(tagType)));
-				break;
+				if (currentPayload.is<TagList>()) {
+					const size_t listLength = stackTop.listLength;
+					const TagType listType = stackTop.listType;
+					NBTList& list = currentPayload.asList();
+					fmt::print("List Size: {}, List Length: {}, List Type: {}\n", list.size(), listLength, to_string(listType));
+					if (list.size() >= listLength)
+						popState();
+					else
+						readListItemPayload(stackTop.listType);
+				} else if (currentPayload.is<TagCompound>()) {
+					const TagType tagType { bytes[pos++] };
+					if (tagType == TagEnd) {
+						popState();
+					} else {
+						if (pos >= bytes.size())
+							throw ParseError("NBT data ended unexpectedly");
+						const auto tagName = readStringPayload();
+						nbt_compound& compound = currentPayload.as<TagCompound>();
+						auto [it, emplaced] = compound.emplace(std::move(tagName));
+						if (!emplaced) throw ParseError(fmt::format("Duplicate key in NBT Compound: \"{}\"", it->first));
+						stateStack.emplace(NBTRef(it->second));
+						readPayload(tagType);
+					}
+				} else {
+					throw ParseError("Invalid parser state");
+				}
 			}
-
-
-
+			//if (pos < bytes.size()) throw ParseError("Finished parsing NBT before reaching end of data");
+			if (stateStack.size() > 1) throw ParseError("NBT data ended unexpectedly");
+			return result;
 		}
 
-		throw ParseError("NBT data ended unexpectedly");
+
+	private:
+
+		void popState() {
+			const auto& poppedState = stateStack.top();
+			const auto& poppedPayload = poppedState.payload.get();
+			stateStack.pop();
+			if (!currentListItemStack.empty() && (&poppedPayload == &currentListItemStack.top())) {
+				auto& topState = stateStack.top();
+				auto& topPayload = topState.payload.get();
+				NBT& currentListItem = currentListItemStack.top();
+				if (!topPayload.isList())
+					throw ParseError("Parsed NBT payload was stored on list stack, but the container value is not a list");
+				nbt_list& list = topPayload.asList();
+				if (currentListItem.getTagType() != list.getTagType())
+					throw ParseError(fmt::format("NBT List of type {} cannot accept value of type {}", to_string(list.getTagType()), to_string(currentListItem.getTagType())));
+				std::visit([&currentListItem](auto& l) {
+					using ListVal = typename std::decay_t<decltype(l)>::value_type;
+					constexpr TagType listType = nbt_tag_type<ListVal>;
+					l.emplace_back(std::move(currentListItem.as<listType>()));
+				}, list.asListVariant());
+				currentListItemStack.pop();
+			}
+		}
+
+		void readPayload(TagType tagType) {
+			auto& stackTop = stateStack.top();
+			switch (tagType) {
+			case TagEnd:
+				throw ParseError(fmt::format("{} has no payload", to_string(TagEnd)));
+				stateStack.pop();
+				return;
+			case TagByte:
+				stackTop.payload.get().emplace<nbt_byte>(readNumericPayload<TagByte>());
+				stateStack.pop();
+				return;
+			case TagShort:
+				stackTop.payload.get().emplace<nbt_short>(readNumericPayload<TagShort>());
+				stateStack.pop();
+				return;
+			case TagInt:
+				stackTop.payload.get().emplace<nbt_int>(readNumericPayload<TagInt>());
+				stateStack.pop();
+				return;
+			case TagLong:
+				stackTop.payload.get().emplace<nbt_long>(readNumericPayload<TagLong>());
+				stateStack.pop();
+				return;
+			case TagFloat:
+				stackTop.payload.get().emplace<nbt_float>(readNumericPayload<TagFloat>());
+				stateStack.pop();
+				return;
+			case TagDouble:
+				stackTop.payload.get().emplace<nbt_double>(readNumericPayload<TagDouble>());
+				stateStack.pop();
+				return;
+			case TagByteArray:
+				stackTop.payload.get().emplace<nbt_byte_array>(readIntegerArrayPayload<TagByteArray>());
+				stateStack.pop();
+				return;
+			case TagString:
+				stackTop.payload.get().emplace<nbt_string>(readStringPayload());
+				stateStack.pop();
+				return;
+			case TagList:
+				{
+					const TagType listType { bytes[pos++] };
+					const size_t listLength = static_cast<size_t>(readNumericPayload<TagInt>());
+					stackTop.payload.get().emplace<TagList>(createNBTList(listType, listLength));
+					if (listLength == 0) {
+						stateStack.pop();
+					} else {
+						stackTop.listType = listType;
+						stackTop.listLength = listLength;
+					}
+				}
+				return;
+			case TagCompound:
+				stackTop.payload.get().emplace<TagCompound>();
+				return;
+			case TagIntArray:
+				stackTop.payload.get().emplace<nbt_int_array>(readIntegerArrayPayload<TagIntArray>());
+				stateStack.pop();
+				return;
+			case TagLongArray:
+				stackTop.payload.get().emplace<nbt_long_array>(readIntegerArrayPayload<TagLongArray>());
+				stateStack.pop();
+				return;
+			}
+			throw ParseError(fmt::format("Invalid NBT Tag Type: {}", getTagTypeId(tagType)));
+		}
+
+		void readListItemPayload(TagType tagType) {
+			auto& stackTop = stateStack.top();
+			switch (tagType) {
+			case TagEnd:
+				throw ParseError(fmt::format("{} has no payload", to_string(TagEnd)));
+				return;
+			case TagByte:
+				stackTop.payload.get().asListOf<TagByte>().emplace_back(readNumericPayload<TagByte>());
+				return;
+			case TagShort:
+				stackTop.payload.get().asListOf<TagShort>().emplace_back(readNumericPayload<TagShort>());
+				return;
+			case TagInt:
+				stackTop.payload.get().asListOf<TagInt>().emplace_back(readNumericPayload<TagInt>());
+				return;
+			case TagLong:
+				stackTop.payload.get().asListOf<TagLong>().emplace_back(readNumericPayload<TagLong>());
+				return;
+			case TagFloat:
+				stackTop.payload.get().asListOf<TagFloat>().emplace_back(readNumericPayload<TagFloat>());
+				return;
+			case TagDouble:
+				stackTop.payload.get().asListOf<TagDouble>().emplace_back(readNumericPayload<TagDouble>());
+				return;
+			case TagByteArray:
+				stackTop.payload.get().asListOf<TagByteArray>().emplace_back(readIntegerArrayPayload<TagByteArray>());
+				return;
+			case TagString:
+				stackTop.payload.get().asListOf<TagString>().emplace_back(readStringPayload());
+				return;
+			case TagList:
+				{
+					const TagType listType { bytes[pos++] };
+					const size_t listLength = static_cast<size_t>(readNumericPayload<TagInt>());
+					if (listLength == 0) {
+						stackTop.payload.get().asListOf<TagList>().emplace_back(createNBTList(listType, listLength));
+					} else {
+						currentListItemStack.emplace(createNBTList(listType, listLength));
+						stateStack.emplace(NBTRef(currentListItemStack.top()), listType, listLength);
+					}
+				}
+				return;
+			case TagCompound:
+				currentListItemStack.emplace(nbt_compound {});
+				stateStack.emplace(NBTRef(currentListItemStack.top()));
+				return;
+			case TagIntArray:
+				stackTop.payload.get().asListOf<TagIntArray>().emplace_back(readIntegerArrayPayload<TagIntArray>());
+				return;
+			case TagLongArray:
+				stackTop.payload.get().asListOf<TagLongArray>().emplace_back(readIntegerArrayPayload<TagLongArray>());
+				return;
+			}
+			throw ParseError(fmt::format("Invalid NBT Tag Type: {}", getTagTypeId(tagType)));
+		}
+
+		template<size_t S>
+		inline ByteSpan<S> getDataSpan(size_t offset) {
+			if ((offset + S) > bytes.size())
+				throw ParseError("NBT data ended unexpectedly");
+			return ByteSpan<S>(bytes.data() + offset, S);
+		}
+		inline ByteSpan<> getDataSpan(size_t offset, size_t length) {
+			if ((offset + length) > bytes.size())
+				throw ParseError("NBT data ended unexpectedly");
+			return ByteSpan<>(bytes.data() + offset, length);
+		}
+
+		template<TagType tagType, typename NBTType = nbt_type<tagType>, std::enable_if_t<std::is_arithmetic_v<NBTType>, int> = 0>
+		NBTType readNumericPayload() {
+			const size_t offset = pos;
+			constexpr size_t valSize = sizeof(NBTType);
+			pos += valSize;
+			return eng::fromBigEndianByteSpan<NBTType>(getDataSpan<valSize>(offset));
+		}
+		template<TagType tagType, typename NBTType = nbt_type<tagType>, std::enable_if_t<((tagType == TagByteArray) || (tagType == TagIntArray) || (tagType == TagLongArray)), int> = 0>
+		NBTType readIntegerArrayPayload() {
+			using ValueType = typename NBTType::value_type;
+			constexpr size_t valSize = sizeof(ValueType);
+			const size_t length = static_cast<size_t>(readNumericPayload<TagInt>());
+			NBTType payload {};
+			if constexpr (tagType == TagByteArray) {
+				if ((pos + (length * valSize)) > bytes.size())
+					throw ParseError("NBT data ended unexpectedly");
+				payload.resize(length);
+				std::memcpy(payload.data(), bytes.data() + pos, length * valSize);
+			} else {
+				payload.reserve(length);
+				for (size_t i = 0; i < length; i++)
+					payload.emplace_back(eng::fromBigEndianByteSpan<ValueType>(getDataSpan<valSize>(pos + (i * valSize))));
+			}
+			pos += length * valSize;
+			return payload;
+		}
+		nbt_string readStringPayload() {
+			using CharType = typename nbt_string::value_type;
+			static_assert(sizeof(CharType) == 1);
+			const size_t length = static_cast<size_t>(readNumericPayload<TagShort>());
+			if ((pos + length) > bytes.size())
+				throw ParseError("NBT data ended unexpectedly");
+			nbt_string result(length, '\0');
+			//result.resize(length);
+			std::memcpy(result.data(), bytes.data() + pos, length);
+			pos += length;
+			return result;
+		}
+
+		nbt_list createNBTList(TagType listType, size_t length) {
+			switch (listType) {
+			case TagEnd:
+				throw ParseError(fmt::format("Invalid NBT Tag Type for {}: {}", to_string(TagList), to_string(TagEnd)));
+				break;
+			case TagByte:
+				{
+					std::vector<nbt_byte> list {};
+					list.reserve(length);
+					return nbt_list(list);
+				}
+			case TagShort:
+				{
+					std::vector<nbt_short> list {};
+					list.reserve(length);
+					return nbt_list(list);
+				}
+			case TagInt:
+				{
+					std::vector<nbt_int> list {};
+					list.reserve(length);
+					return nbt_list(list);
+				}
+			case TagLong:
+				{
+					std::vector<nbt_long> list {};
+					list.reserve(length);
+					return nbt_list(list);
+				}
+			case TagFloat:
+				{
+					std::vector<nbt_float> list {};
+					list.reserve(length);
+					return nbt_list(list);
+				}
+			case TagDouble:
+				{
+					std::vector<nbt_double> list {};
+					list.reserve(length);
+					return nbt_list(list);
+				}
+			case TagByteArray:
+				{
+					std::vector<nbt_byte_array> list {};
+					list.reserve(length);
+					return nbt_list(list);
+				}
+			case TagString:
+				{
+					std::vector<nbt_string> list {};
+					list.reserve(length);
+					return nbt_list(list);
+				}
+			case TagList:
+				{
+					std::vector<nbt_list> list {};
+					list.reserve(length);
+					return nbt_list(list);
+				}
+			case TagCompound:
+				{
+					std::vector<nbt_compound> list {};
+					list.reserve(length);
+					return nbt_list(list);
+				}
+			case TagIntArray:
+				{
+					std::vector<nbt_int_array> list {};
+					list.reserve(length);
+					return nbt_list(list);
+				}
+			case TagLongArray:
+				{
+					std::vector<nbt_long_array> list {};
+					list.reserve(length);
+					return nbt_list(list);
+				}
+			}
+			throw ParseError(fmt::format("Invalid NBT Tag Type: {}", getTagTypeId(listType)));
+		}
+
+	};
+
+	NBT parseNBT(NBTParser::ByteSpan<> bytes) {
+		return NBTParser(bytes)();
 	}
 
 

@@ -24,7 +24,7 @@ namespace nbt::parsing {
 	};
 
 
-	NBT parseNBT(std::span<unsigned char> bytes);
+	NBT parseNBT(std::span<const unsigned char> bytes);
 
 	NBT parseSNBT(std::string_view str);
 

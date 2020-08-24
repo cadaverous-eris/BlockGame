@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <map>
 #include <vector>
+#include <array>
 #include <optional>
 #include <iostream>
 
@@ -45,6 +46,20 @@ namespace nbt {
             nbt_int_array,
             nbt_long_array
 		>;
+		static inline constexpr auto variant_index_tag_types = std::to_array<TagType>({
+			TagByte,
+			TagShort,
+			TagInt,
+			TagLong,
+			TagFloat,
+			TagDouble,
+			TagByteArray,
+			TagString,
+			TagList,
+			TagCompound,
+			TagIntArray,
+			TagLongArray,
+		});
 
 		variant_type value;
 
@@ -368,6 +383,9 @@ namespace nbt {
 
         template<typename T, std::enable_if_t<is_convertible_from_nbt_v<T>, int> = 0>
 		inline operator T() const { return NBTTypeCompat<T>::fromNBT(*this); }
+
+
+		std::vector<unsigned char> toBinary(nbt_string_view name) const;
 
         std::string toSNBT(const size_t indentAmount = 0, const char indentChar = ' ', const size_t indentLevel = 0) const;
 

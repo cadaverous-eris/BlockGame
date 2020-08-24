@@ -79,8 +79,8 @@ namespace eng {
 		}
 
 		template<typename U = T>
-		constexpr T intersects(const glm::vec<3, U>& p) const {
-			epsZero(signedDistanceTo(p));
+		constexpr bool intersects(const glm::vec<3, U>& p) const {
+			return epsZero(signedDistanceTo(p));
 		}
 
 	};
