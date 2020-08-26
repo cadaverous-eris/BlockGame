@@ -48,25 +48,51 @@ namespace eng {
 		//	std::cout << '\n' << nbt.toSNBT(2) << '\n' << '\n';
 		//}
 
-		//std::cout << '\n';
-		//const std::string nbtFilePath = "bigtest.nbt";//"test.nbt";
-		//const auto fileData = readCompressedBinaryFile(nbtFilePath);//readBinaryFile(nbtFilePath);
-		//std::cout << "Uncompressed size of '" << nbtFilePath << "': " << fileData.size() << '\n';
-		//bool parsedNBT = false;
-		//nbt::NBT nbt {};
-		//try {
-		//	nbt = nbt::parseNBT(std::span<const unsigned char>(fileData.data(), fileData.size()));
-		//	parsedNBT = true;
-		//} catch(const nbt::ParseError& parseError) {
-		//	std::cerr << '\n' << "Error parsing NBT:" << '\n';
-		//	std::cerr << parseError.what() << '\n' << '\n';
-		//}
-		//const std::string snbtFilePath = "test.snbt";
-		//if (parsedNBT) {
-		//	writeTextFile(snbtFilePath, nbt.toSNBT(2));
-		//	std::cout << '\n' << "Successfully parsed " << nbtFilePath << ", SNBT written to " << snbtFilePath << '\n' << '\n';
-		//	//std::cout << '\n' << nbt.toSNBT(2) << '\n' << '\n';
-		//}
+		std::cout << '\n';
+		const std::string nbtFilePath = "bigtest.nbt";//"test.nbt";
+		const std::string nbtFileName = [&]() -> std::string {
+			std::string_view fileName = std::string_view(nbtFilePath);
+			const auto lastDotIndex = fileName.find_last_of('.');
+			const auto lastSlashIndex = fileName.find_last_of('/', lastDotIndex);
+			if (lastDotIndex != std::string_view::npos)
+				fileName = fileName.substr(0, lastDotIndex);
+			if ((lastSlashIndex != std::string_view::npos) && ((lastSlashIndex + 1) < fileName.size()))
+				fileName = fileName.substr(lastSlashIndex + 1);
+			return std::string(fileName);
+		}();
+		const bool isFileCompressed = true;
+		const auto fileData = isFileCompressed ?
+				readCompressedBinaryFile("../nbt_testing/" + nbtFilePath) :
+				readBinaryFile("../nbt_testing/" + nbtFilePath);
+		std::cout << "Uncompressed size of '" << nbtFilePath << "': " << fileData.size() << '\n';
+		bool parsedNBT = false;
+		nbt::NBT nbt {};
+		try {
+			nbt = nbt::parseNBT(std::span<const unsigned char>(fileData.data(), fileData.size()));
+			parsedNBT = true;
+		} catch(const nbt::ParseError& parseError) {
+			std::cerr << '\n' << "Error parsing NBT:" << '\n';
+			std::cerr << parseError.what() << '\n' << '\n';
+		}
+		const std::string snbtFilePath = "../nbt_testing/" + (nbtFileName.empty() ? std::string("test") : nbtFileName) + ".snbt";
+		const std::string nbtCopyFilePath = "../nbt_testing/" + (nbtFileName.empty() ? std::string("test") : nbtFileName) + "_reserialized.nbt";
+		const std::string snbtCopyFilePath = "../nbt_testing/" + (nbtFileName.empty() ? std::string("test") : nbtFileName) + "_reserialized.snbt";
+		if (parsedNBT) {
+			writeTextFile(snbtFilePath, nbt.toSNBT(2));
+			std::cout << '\n' << "Successfully parsed " << nbtFilePath << ", SNBT written to " << snbtFilePath << '\n' << '\n';
+			//std::cout << '\n' << nbt.toSNBT(2) << '\n' << '\n';
+
+			const auto reserializedBytes = [&]() {
+				const auto it = nbt.asCompound().cbegin();
+				return it->second.toBinary(it->first);
+			}();
+			if (isFileCompressed)
+				writeCompressedBinaryFile(nbtCopyFilePath, std::span<const unsigned char>(reserializedBytes.begin(), reserializedBytes.end()));
+			else
+				writeBinaryFile(nbtCopyFilePath, std::span<const unsigned char>(reserializedBytes.begin(), reserializedBytes.end()));
+			const auto reserializedNBT = nbt::parseNBT(std::span<const unsigned char>(reserializedBytes.begin(), reserializedBytes.end()));
+			writeTextFile(snbtCopyFilePath, reserializedNBT.toSNBT(2));
+		}
 
 		//std::vector<Color> testByteVec { {}, color::aquamarine, color::black, };
 		//std::vector<uint64_t> testByteVec { 0x00, 0x01, 0xFF, 0x7D, 0x7F, };

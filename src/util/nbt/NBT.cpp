@@ -5,11 +5,13 @@
 #include <algorithm>
 #include <stack>
 #include <vector>
+#include <stdexcept>
 
 #include <fmt/core.h>
 
 #include "parsing_utils.h"
 #include "util/math/bytes.h"
+#include "util/variant_visitor.h"
 
 namespace nbt {
 
@@ -417,32 +419,32 @@ namespace nbt {
 	}
 
 
-	inline void writeTagType(std::vector<unsigned char> bytes, const TagType& tagType) {
+	inline void writeTagTypeByte(std::vector<unsigned char>& bytes, const TagType& tagType) {
 		bytes.emplace_back(static_cast<unsigned char>(getTagTypeId(tagType)));
 	}
 	template<TagType tagType, typename T = nbt_type<tagType>, typename Uint = eng::sized_uint_t<sizeof(T)>, std::enable_if_t<std::is_arithmetic_v<T>, int> = 0>
-	void writeNumericBytes(std::vector<unsigned char> bytes, const T& n) {
+	void writeNumericBytes(std::vector<unsigned char>& bytes, const T& n) {
 		const Uint u = eng::toBigEndianUintBytes(n);
 		const auto vecSize = bytes.size();
 		bytes.resize(vecSize + sizeof(Uint));
 		std::memcpy(bytes.data() + vecSize, &u, sizeof(Uint));
 	}
-	template<TagType tagType, typename T = nbt_type<tagType>, typename ValType = typename T::value_type, std::enable_if_t<((tagType == TagByteArray) || (tagType == TagIntArray) || (tagType == TagLongArray)), int> = 0>
-	void writeIntegerArrayBytes(std::vector<unsigned char> bytes, const T& t) {
+	template<TagType tagType, typename T = nbt_type<tagType>, typename ValType = typename T::value_type, TagType valTagType = nbt_tag_type<ValType>, std::enable_if_t<((tagType == TagByteArray) || (tagType == TagIntArray) || (tagType == TagLongArray)), int> = 0>
+	void writeIntegerArrayBytes(std::vector<unsigned char>& bytes, const T& t) {
 		const nbt_int length = static_cast<nbt_int>(t.size());
 		constexpr size_t valSize = sizeof(ValType);
 		writeNumericBytes<TagInt>(bytes, length);
 		if constexpr (tagType == TagByteArray) {
 			const auto vecSize = bytes.size();
-			bytes.resize(vecSize + (length * valSize));
-			std::memcpy(bytes.data() + vecSize, t.data(), length * valSize);
+			bytes.resize(vecSize + (static_cast<size_t>(length) * valSize));
+			std::memcpy(bytes.data() + vecSize, t.data(), static_cast<size_t>(length) * valSize);
 		} else {
-			bytes.reserve(bytes.size() + (length * valSize));
+			bytes.reserve(bytes.size() + (static_cast<size_t>(length) * valSize));
 			for (const auto& val : t)
-				writeNumericBytes<ValType>(bytes, val);
+				writeNumericBytes<valTagType>(bytes, val);
 		}
 	}
-	void writeStringBytes(std::vector<unsigned char> bytes, nbt_string_view s) {
+	void writeStringBytes(std::vector<unsigned char>& bytes, nbt_string_view s) {
 		using CharType = typename nbt_string::value_type;
 		static_assert(sizeof(CharType) == 1);
 		const nbt_short length = static_cast<nbt_short>(s.size());
@@ -456,9 +458,8 @@ namespace nbt {
 		using std::stack, std::reference_wrapper, std::vector;
 
 		struct State {
-			const NBT* nbt;
-			const NBTList* listList = nullptr;
-			const NBTCompound* listCompound = nullptr;
+			const NBTList* nbtList = nullptr;
+			const NBTCompound* nbtCompound = nullptr;
 			std::variant<size_t, NBTCompound::const_iterator> pos = size_t{0};
 			std::variant<size_t, NBTCompound::const_iterator> end = size_t{0};
 			TagType listType = TagEnd;
@@ -466,24 +467,142 @@ namespace nbt {
 
 		vector<unsigned char> bytes;
 
+		writeTagTypeByte(bytes, this->getTagType());
+		writeStringBytes(bytes, name);
+
 		stack<State> stateStack {};
+
+		const auto pushListState = [&stateStack, &bytes](const nbt_list& list, const size_t& listSize) {
+			writeTagTypeByte(bytes, list.getTagType());
+			writeNumericBytes<TagInt>(bytes, static_cast<nbt_int>(listSize));
+			stateStack.emplace(&list, nullptr, size_t{0}, listSize, list.getTagType());
+		};
+		const auto pushCompoundState = [&stateStack](const nbt_compound& compound) {
+			stateStack.emplace(nullptr, &compound, compound.begin(), compound.end());
+		};
+		const auto writeSimpleNBTBytes = [&bytes](const NBT& nbt) {
+			const TagType tagType = nbt.getTagType();
+			switch (tagType) {
+			case TagByte:
+				writeNumericBytes<TagByte>(bytes, nbt.as<TagByte>());
+				break;
+			case TagShort:
+				writeNumericBytes<TagShort>(bytes, nbt.as<TagShort>());
+				break;
+			case TagInt:
+				writeNumericBytes<TagInt>(bytes, nbt.as<TagInt>());
+				break;
+			case TagLong:
+				writeNumericBytes<TagLong>(bytes, nbt.as<TagLong>());
+				break;
+			case TagFloat:
+				writeNumericBytes<TagFloat>(bytes, nbt.as<TagFloat>());
+				break;
+			case TagDouble:
+				writeNumericBytes<TagDouble>(bytes, nbt.as<TagDouble>());
+				break;
+			case TagByteArray:
+				writeIntegerArrayBytes<TagByteArray>(bytes, nbt.as<TagByteArray>());
+				break;
+			case TagString:
+				writeStringBytes(bytes, nbt.as<TagString>());
+				break;
+			case TagIntArray:
+				writeIntegerArrayBytes<TagIntArray>(bytes, nbt.as<TagIntArray>());
+				break;
+			case TagLongArray:
+				writeIntegerArrayBytes<TagLongArray>(bytes, nbt.as<TagLongArray>());
+				break;
+			case TagList:
+			case TagCompound:
+				// TODO: throw?
+				//throw std::runtime_error(fmt::format("Invalid NBT serializer state: {} payloads must be pushed to the state stack for serialization", to_string(tagType)));
+				break;
+			case TagEnd:
+				// TODO: throw?
+				//throw std::runtime_error(fmt::format("Invalid NBT serializer state: {} has no payload", to_string(tagType)));
+				break;
+			}
+		};
+
 		if (this->isList()) {
 			const auto& list = this->asList();
-			stateStack.emplace(nullptr, &list, nullptr, 0, list.size(), list.getTagType());
+			pushListState(list, list.size());
 		} else if (this->isCompound()) {
-			const auto& compound = this->asCompound();
-			stateStack.emplace(nullptr, nullptr, &compound, compound.begin(), compound.end());
+			pushCompoundState(this->asCompound());
 		} else {
-			stateStack.emplace(this);
+			writeSimpleNBTBytes(*this);
+			return bytes;
 		}
 
 		while (!stateStack.empty()) {
-			// TODO: implement
-			assert(false);
-
-
-
-
+			auto& topState = stateStack.top();
+			if (topState.nbtCompound) { // Compound
+				const auto& end = std::get<NBTCompound::const_iterator>(topState.end);
+				auto& pos = std::get<NBTCompound::const_iterator>(topState.pos);
+				if (pos == end) {
+					writeTagTypeByte(bytes, TagEnd);
+					stateStack.pop();
+				} else {
+					while (pos != end) {
+						const NBT& value = pos->second;
+						writeTagTypeByte(bytes, value.getTagType());
+						writeStringBytes(bytes, pos->first);
+						pos++;
+						if (value.isList()) {
+							const auto& list = value.asList();
+							const auto listSize = list.size();
+							if (listSize == 0) {
+								writeTagTypeByte(bytes, list.getTagType());
+								writeNumericBytes<TagInt>(bytes, static_cast<nbt_int>(listSize));
+							} else {
+								pushListState(list, listSize);
+								break;
+							}
+						} else if (value.isCompound()) {
+							const auto& compound = value.asCompound();
+							if (compound.empty()) {
+								writeTagTypeByte(bytes, TagEnd);
+							} else {
+								pushCompoundState(compound);
+								break;
+							}
+						} else {
+							writeSimpleNBTBytes(value);
+						}
+					}
+				}
+			} else if (topState.nbtList) { // List
+				const auto& end = std::get<size_t>(topState.end);
+				auto& pos = std::get<size_t>(topState.pos);
+				if (pos < end) {
+					std::visit([&](const auto& list) {
+						using NBTType = typename std::decay_t<decltype(list)>::value_type;
+						constexpr TagType tagType = nbt_tag_type<NBTType>;
+						if constexpr (tagType == TagList) {
+							pushListState(list[pos], list[pos].size());
+							pos++;
+						} else if constexpr (tagType == TagCompound) {
+							pushCompoundState(list[pos++]);
+						} else {
+							while (pos < end) {
+								if constexpr (tagType == TagString)
+									writeStringBytes(bytes, list[pos]);
+								else if constexpr ((tagType == TagByteArray) || (tagType == TagIntArray) || (tagType == TagLongArray))
+									writeIntegerArrayBytes<tagType>(bytes, list[pos]);
+								else
+									writeNumericBytes<tagType>(bytes, list[pos]);
+								pos++;
+							}
+							stateStack.pop();
+						}
+					}, topState.nbtList->asListVariant());
+				} else {
+					stateStack.pop();
+				}
+			}/* else { // TODO: throw?
+				throw std::runtime_error("Invalid NBT serializer state");
+			}*/
 		}
 
 		return bytes;

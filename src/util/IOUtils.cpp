@@ -45,14 +45,14 @@ namespace eng {
 		fileStream.read(reinterpret_cast<char*>(bytes.data()), fileSize);
 		return bytes;
 	}
-	void writeBinaryFile(const std::string& filePath, std::span<unsigned char> bytes) {
+	void writeBinaryFile(const std::string& filePath, std::span<const unsigned char> bytes) {
 		std::ofstream fileStream(filePath, std::ios::out | std::ios::binary | std::ios::trunc);
 		if (!fileStream.is_open()) {
 			std::cerr << "Could not open file at " << filePath << std::endl;
 			throw std::runtime_error("Could not open file at " + std::string(filePath));
 		}
 		// TODO: handle byte spans with sizes too large to be represented by std::streamsize (std::ptrdiff_t)?
-		fileStream.write(reinterpret_cast<char*>(bytes.data()), static_cast<std::streamsize>(bytes.size_bytes()));
+		fileStream.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size_bytes()));
 	}
 
 	std::vector<unsigned char> readCompressedBinaryFile(const std::string& filePath) {
@@ -81,7 +81,7 @@ namespace eng {
 		};
 		return bytes;
 	}
-	void writeCompressedBinaryFile(const std::string& filePath, std::span<unsigned char> bytes) {
+	void writeCompressedBinaryFile(const std::string& filePath, std::span<const unsigned char> bytes) {
 		std::ofstream fileStream(filePath, std::ios::out | std::ios::binary | std::ios::trunc);
 		if (!fileStream.is_open()) {
 			std::cerr << "Could not open file at " << filePath << std::endl;
@@ -89,7 +89,7 @@ namespace eng {
 		}
 		zstr::ostream zFileStream(fileStream);
 		// TODO: handle byte spans with sizes too large to be represented by std::streamsize (std::ptrdiff_t)?
-		zFileStream.write(reinterpret_cast<char*>(bytes.data()), static_cast<std::streamsize>(bytes.size_bytes()));
+		zFileStream.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size_bytes()));
 	}
 
 }
