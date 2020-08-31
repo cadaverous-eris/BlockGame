@@ -60,9 +60,9 @@ namespace nbt::parsing {
 
 				if (currentPayload.is<TagList>()) {
 					const size_t listLength = stackTop.listLength;
-					const TagType listType = stackTop.listType;
+					//const TagType listType = stackTop.listType;
 					NBTList& list = currentPayload.asList();
-					fmt::print("List Size: {}, List Length: {}, List Type: {}\n", list.size(), listLength, to_string(listType));
+					//fmt::print("List Size: {}, List Length: {}, List Type: {}\n", list.size(), listLength, to_string(listType));
 					if (list.size() >= listLength)
 						popState();
 					else
