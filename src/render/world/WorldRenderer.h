@@ -44,7 +44,7 @@ namespace eng {
 
 		VertexArray blockSelectionVAO;
 		VertexBuffer blockSelectionVBO;
-		ShaderProgram blockSelectionShader = ShaderProgram::load("block_selection.vert", "block_selection.frag");
+		ShaderProgram blockSelectionShader = ShaderProgram::load("world/block_selection.vert", "world/block_selection.frag");
 
 		std::array<std::vector<BlockQuad>, render_layer::layers.size()> blockQuads;
 

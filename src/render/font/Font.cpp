@@ -26,14 +26,14 @@ namespace eng {
 
 	glm::vec2 Glyph::getMinUV() const {
 		return {
-			static_cast<float>(uvMin.x) / font->font->getTexture().getWidth(),
-			static_cast<float>(uvMin.y) / font->font->getTexture().getHeight(),
+			static_cast<float>(uvMin.x) / static_cast<float>(font->font->getTexture().getWidth()),
+			static_cast<float>(uvMin.y) / static_cast<float>(font->font->getTexture().getHeight()),
 		};
 	}
 	glm::vec2 Glyph::getMaxUV() const {
 		return {
-			static_cast<float>(uvMax.x) / font->font->getTexture().getWidth(),
-			static_cast<float>(uvMax.y) / font->font->getTexture().getHeight(),
+			static_cast<float>(uvMax.x) / static_cast<float>(font->font->getTexture().getWidth()),
+			static_cast<float>(uvMax.y) / static_cast<float>(font->font->getTexture().getHeight()),
 		};
 	}
 
@@ -69,22 +69,36 @@ namespace eng {
 
 	FontData::FontData(std::vector<unsigned char>&& fileData, int offset) : data(std::move(fileData)) {
 		if (!stbtt_InitFont(&fontInfo, data.data(), offset)) // initialize the stb_truetype font info object
-			throw std::runtime_error("Font loading error");
+			throw std::runtime_error("Failed to initialize font");
 
 		fontScale = stbtt_ScaleForPixelHeight(&fontInfo, FontRenderer::sdf_size);
 
 		int asc, desc, lg;
 		stbtt_GetFontVMetrics(&fontInfo, &asc, &desc, &lg);
-		ascent = asc * fontScale;
-		descent = desc * fontScale;
-		lineGap = lg * fontScale;
+		ascent = static_cast<float>(asc) * fontScale;
+		descent = static_cast<float>(desc) * fontScale;
+		lineGap = static_cast<float>(lg) * fontScale;
 		lineHeight = (ascent - descent) + lineGap;
 	}
 
 	Font Font::loadFont(const std::string& filePath, std::initializer_list<std::string> fallbackPaths) {
+		return loadFont(filePath, { fallbackPaths.begin(), fallbackPaths.end() });
+	}
+	Font Font::loadFont(const std::string& filePath, const std::span<const std::string> fallbackPaths) {
 		std::vector<FontData> fallbackFonts;
-		for (const auto& fPath : fallbackPaths)
-			fallbackFonts.emplace_back(readBinaryFile("res/fonts/" + fPath));
+		for (const std::string& fPath : fallbackPaths) {
+			if (!fPath.empty()) {
+				try {
+					fallbackFonts.emplace_back(readBinaryFile("res/fonts/" + fPath));
+				} catch (const std::runtime_error& e) {
+					std::cerr << "Error loading font data from \"" << fPath << "\":\n\t" << e.what() << '\n';
+				} catch (...) {
+					std::cerr << "Error loading font data from \"" << fPath << "\"\n";
+				}
+			}
+		}
+		if (filePath.empty())
+			throw std::runtime_error("Empty font file path");
 		return Font({ readBinaryFile("res/fonts/" + filePath) }, std::move(fallbackFonts));
 	}
 
@@ -98,9 +112,9 @@ namespace eng {
 
 	float Font::getKernAdvance(const Glyph& glyph1, const Glyph& glyph2) const {
 		int kernAdvance = stbtt_GetGlyphKernAdvance(&glyph1.font->fontInfo, glyph1.index, glyph2.index);
-		if (kernAdvance) return kernAdvance * glyph1.font->fontScale;
+		if (kernAdvance) return static_cast<float>(kernAdvance) * glyph1.font->fontScale;
 		kernAdvance = stbtt_GetGlyphKernAdvance(&glyph2.font->fontInfo, glyph1.index, glyph2.index);
-		return kernAdvance * glyph2.font->fontScale;
+		return static_cast<float>(kernAdvance) * glyph2.font->fontScale;
 	}
 
 	// creates a vector of codepoints in the range [begin, end] (inclusive)

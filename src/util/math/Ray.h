@@ -1,4 +1,5 @@
-#pragma once
+#ifndef MATH_RAY_H
+#define MATH_RAY_H
 
 #include <limits>
 
@@ -10,7 +11,7 @@
 
 namespace eng {
 
-	template<typename T> struct AxisAlignedBox;
+	template<typename T, typename> struct AxisAlignedBox;
 
 	template<typename T = float>
 	struct Ray {
@@ -39,7 +40,7 @@ namespace eng {
 			length = glm::length(diff);
 			inverseDir = length / diff;
 		}
-		
+
 		inline const vec3_t& getOrigin() const { return origin; }
 		inline const vec3_t& getInverseDir() const { return inverseDir; }
 		inline T getLength() const { return length; }
@@ -75,7 +76,7 @@ namespace eng {
 			return (d / inverseDir) + origin;
 		}
 
-		AxisAlignedBox<T> getBoundingBox() const;
+		AxisAlignedBox<T, void> getBoundingBox() const;
 
 		constexpr bool operator ==(const Ray<T>& b) const {
 			return (origin == b.origin) && (inverseDir == b.inverseDir) && (length == b.length);
@@ -110,8 +111,10 @@ namespace eng {
 namespace eng {
 
 	template<typename T>
-	AxisAlignedBox<T> Ray<T>::getBoundingBox() const {
+	AxisAlignedBox<T, void> Ray<T>::getBoundingBox() const {
 		return { origin, getEndPoint() };
 	}
 
 }
+
+#endif

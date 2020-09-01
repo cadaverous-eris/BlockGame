@@ -23,16 +23,16 @@ namespace eng {
 		glm::vec3 pos;
 		glm::vec2 texCoord;
 
-		FontVert() = default;
-		FontVert(const glm::vec3& pos, const glm::vec2& texCoord) noexcept :
+		constexpr FontVert() noexcept = default;
+		constexpr FontVert(const glm::vec3& pos, const glm::vec2& texCoord) noexcept :
 				pos(pos), texCoord(texCoord) {}
-		FontVert(const glm::vec2& pos, const glm::vec2& texCoord) noexcept :
+		constexpr FontVert(const glm::vec2& pos, const glm::vec2& texCoord) noexcept :
 				pos(pos, 0.0f), texCoord(texCoord) {}
 
-		bool operator ==(const FontVert& b) const noexcept {
+		constexpr bool operator ==(const FontVert& b) const noexcept {
 			return (pos == b.pos) && (texCoord == b.texCoord);
 		}
-		bool operator !=(const FontVert& b) const noexcept {
+		constexpr bool operator !=(const FontVert& b) const noexcept {
 			return (pos != b.pos) || (texCoord != b.texCoord);
 		}
 	};
@@ -45,24 +45,26 @@ namespace eng {
 		float outlineSize;
 		float outlineSpread;
 
-		FontQuad() = default;
+		constexpr FontQuad() noexcept = default;
 		// top left, bottom left, top right, bottom right, color, outlineColor, outlineSize, outlineSpread
-		FontQuad(const FontVert& v0, const FontVert& v1, const FontVert& v2, const FontVert& v3,
-				 const Color& color, const Color& outlineColor, float outlineSize, float outlineSpread) noexcept :
-			posX(v0.pos.x, v1.pos.x, v2.pos.x, v3.pos.x),
-			posY(v0.pos.y, v1.pos.y, v2.pos.y, v3.pos.y),
-			posZ(v0.pos.z, v1.pos.z, v2.pos.z, v3.pos.z),
-			texU(v0.texCoord.x, v1.texCoord.x, v2.texCoord.x, v3.texCoord.x),
-			texV(v0.texCoord.y, v1.texCoord.y, v2.texCoord.y, v3.texCoord.y),
-			color(color), outlineColor(outlineColor),
-			outlineSize(outlineSize), outlineSpread(outlineSpread) {}
+		constexpr FontQuad(const FontVert& v0, const FontVert& v1, const FontVert& v2, const FontVert& v3,
+						   const Color& color, const Color& outlineColor, float outlineSize, float outlineSpread) noexcept :
+				posX(v0.pos.x, v1.pos.x, v2.pos.x, v3.pos.x),
+				posY(v0.pos.y, v1.pos.y, v2.pos.y, v3.pos.y),
+				posZ(v0.pos.z, v1.pos.z, v2.pos.z, v3.pos.z),
+				texU(v0.texCoord.x, v1.texCoord.x, v2.texCoord.x, v3.texCoord.x),
+				texV(v0.texCoord.y, v1.texCoord.y, v2.texCoord.y, v3.texCoord.y),
+				color(color), outlineColor(outlineColor),
+				outlineSize(outlineSize), outlineSpread(outlineSpread) {}
 
-		FontVert getVertex(const size_t vertIndex) const noexcept {
-			const size_t i = vertIndex & 3;
+		constexpr FontVert getVertex(const size_t vertIndex) const noexcept {
+			using length_t = typename glm::vec4::length_type;
+			const length_t i = static_cast<length_t>(vertIndex) & length_t(3);
 			return { { posX[i], posY[i], posZ[i] }, { texU[i], texV[i] } };
 		}
 		void setVertex(const size_t vertIndex, const FontVert& vert) noexcept {
-			const size_t i = vertIndex & 3;
+			using length_t = typename glm::vec4::length_type;
+			const length_t i = static_cast<length_t>(vertIndex) & length_t(3);
 			posX[i] = vert.pos.x;
 			posY[i] = vert.pos.y;
 			posZ[i] = vert.pos.z;
@@ -70,7 +72,7 @@ namespace eng {
 			texV[i] = vert.texCoord.y;
 		}
 
-		bool operator ==(const FontQuad& b) const noexcept {
+		constexpr bool operator ==(const FontQuad& b) const noexcept {
 			return (posX == b.posX) &&
 				   (posY == b.posY) &&
 				   (posZ == b.posZ) &&
@@ -81,7 +83,7 @@ namespace eng {
 				   (outlineSize == b.outlineSize) &&
 				   (outlineSpread == b.outlineSpread);
 		}
-		bool operator !=(const FontQuad& b) const noexcept {
+		constexpr bool operator !=(const FontQuad& b) const noexcept {
 			return (posX != b.posX) ||
 				   (posY != b.posY) ||
 				   (posZ != b.posZ) ||
@@ -97,7 +99,7 @@ namespace eng {
 		// Translation
 
 		template<typename T, glm::qualifier Q, std::enable_if_t<std::is_arithmetic_v<T>>* = nullptr>
-		FontQuad getTranslated(const glm::vec<3, T, Q>& offset) const {
+		constexpr FontQuad getTranslated(const glm::vec<3, T, Q>& offset) const {
 			return {
 				{ { posX[0] + offset.x, posY[0] + offset.y, posZ[0] + offset.z }, { texU[0], texV[0] }, },
 				{ { posX[1] + offset.x, posY[1] + offset.y, posZ[1] + offset.z }, { texU[1], texV[1] }, },
@@ -117,7 +119,7 @@ namespace eng {
 
 		// Dilation
 
-		FontQuad getScaled(const float scale) const noexcept {
+		constexpr FontQuad getScaled(const float scale) const noexcept {
 			return {
 				{ { posX[0] * scale, posY[0] * scale, posZ[0] * scale }, { texU[0], texV[0] }, },
 				{ { posX[1] * scale, posY[1] * scale, posZ[1] * scale }, { texU[1], texV[1] }, },
@@ -126,7 +128,7 @@ namespace eng {
 				color, outlineColor, outlineSize, outlineSpread,
 			};
 		}
-		FontQuad getScaled(const glm::vec3& scale) const noexcept {
+		constexpr FontQuad getScaled(const glm::vec3& scale) const noexcept {
 			return {
 				{ { posX[0] * scale.x, posY[0] * scale.y, posZ[0] * scale.z }, { texU[0], texV[0] } },
 				{ { posX[1] * scale.x, posY[1] * scale.y, posZ[1] * scale.z }, { texU[1], texV[1] } },

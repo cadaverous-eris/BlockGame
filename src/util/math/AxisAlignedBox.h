@@ -16,8 +16,11 @@
 
 namespace eng {
 
-	template<typename T = float>
-	struct AxisAlignedBox {
+	template<typename T = float, typename = void>
+	struct AxisAlignedBox;
+
+	template<typename T>
+	struct AxisAlignedBox<T, typename std::enable_if_t<std::is_arithmetic_v<T>>> {
 		using vec_type = glm::vec<3, T>;
 
 		vec_type min { 0, 0, 0 };
@@ -25,40 +28,38 @@ namespace eng {
 
 		constexpr AxisAlignedBox(const vec_type& min, const vec_type& max) noexcept : min(min), max(max) {}
 		constexpr AxisAlignedBox(const vec_type& size) : max(size) {}
-		constexpr AxisAlignedBox() = default;
+		constexpr AxisAlignedBox() noexcept = default;
 
-		constexpr AxisAlignedBox(const AxisAlignedBox&) = default;
-		constexpr AxisAlignedBox(AxisAlignedBox&&) = default;
-		constexpr AxisAlignedBox& operator =(const AxisAlignedBox&) = default;
-		constexpr AxisAlignedBox& operator =(AxisAlignedBox&&) = default;
+		constexpr AxisAlignedBox(const AxisAlignedBox&) noexcept = default;
+		constexpr AxisAlignedBox(AxisAlignedBox&&) noexcept = default;
+		constexpr AxisAlignedBox& operator =(const AxisAlignedBox&) noexcept = default;
+		constexpr AxisAlignedBox& operator =(AxisAlignedBox&&) noexcept = default;
 
 		template<typename U>
 		explicit AxisAlignedBox(const std::enable_if_t<!std::is_same_v<T, U> && std::is_convertible_v<glm::vec<3, U>, vec_type>, AxisAlignedBox<U>>& b) :
 				min(static_cast<vec_type>(b.min)), max(static_cast<vec_type>(b.max)) {}
 
-		// TODO: union, scaling etc
-
-		vec_type getCenter() const {
+		vec_type getCenter() const noexcept {
 			return (min + max) / T(2);
 		}
 
-		T getVolume() const {
+		T getVolume() const noexcept {
 			return (max.x - min.x) * (max.y - min.y) * (max.z - min.z);
 		}
 
 		template<typename U>
-		bool contains(const glm::vec<3, U>& p) const {
+		bool contains(const glm::vec<3, U>& p) const noexcept {
 			return (static_cast<bool>(*this) &&
 					(p.x >= min.x && p.x <= max.x) &&
 					(p.y >= min.y && p.y <= max.y) &&
 					(p.z >= min.z && p.z <= max.z));
 		}
 		template<typename U>
-		bool contains(const AxisAlignedBox<U>& b) const {
+		bool contains(const AxisAlignedBox<U>& b) const noexcept {
 			return (static_cast<bool>(b) && contains(b.min) && contains(b.max));
 		}
 		template<typename U>
-		bool intersects(const AxisAlignedBox<U>& b) const {
+		bool intersects(const AxisAlignedBox<U>& b) const noexcept {
 			return (static_cast<bool>(b) &&
 					static_cast<bool>(*this) &&
 					(min.x < b.max.x && max.x > b.min.x) &&
@@ -66,23 +67,23 @@ namespace eng {
 					(min.z < b.max.z && max.z > b.min.z));
 		}
 
-		operator bool() const {
+		operator bool() const noexcept {
 			return min != max;
 		}
 
-		bool operator ==(const AxisAlignedBox<T>& b) const {
+		bool operator ==(const AxisAlignedBox<T>& b) const noexcept {
 			return (min == b.min) && (max == b.max);
 		}
-		bool operator !=(const AxisAlignedBox<T>& b) const {
+		bool operator !=(const AxisAlignedBox<T>& b) const noexcept {
 			return (min != b.min) || (max != b.max);
 		}
 
-		AxisAlignedBox<T> operator +() const { return *this; }
-		AxisAlignedBox<T> operator -() const { return { max, min }; }
+		AxisAlignedBox<T> operator +() const noexcept { return *this; }
+		AxisAlignedBox<T> operator -() const noexcept { return { max, min }; }
 
 		// offset bounding box
 		template<typename U>
-		auto operator +=(const glm::vec<3, U>& offset) ->
+		auto operator +=(const glm::vec<3, U>& offset) noexcept ->
 				std::enable_if_t<std::is_convertible_v<glm::vec<3, U>, vec_type>, AxisAlignedBox<T>&> {
 			const auto o = static_cast<vec_type>(offset);
 			min += o;
@@ -91,7 +92,7 @@ namespace eng {
 		}
 		// offset bounding box
 		template<typename U>
-		auto operator -=(const glm::vec<3, U>& offset) ->
+		auto operator -=(const glm::vec<3, U>& offset) noexcept ->
 				std::enable_if_t<std::is_convertible_v<glm::vec<3, U>, vec_type>, AxisAlignedBox<T>&> {
 			const auto o = static_cast<vec_type>(offset);
 			min -= o;
@@ -101,7 +102,7 @@ namespace eng {
 
 		// scale bounding box
 		template<typename U>
-		auto operator *=(const glm::vec<3, U>& scale) ->
+		auto operator *=(const glm::vec<3, U>& scale) noexcept ->
 				std::enable_if_t<std::is_convertible_v<glm::vec<3, U>, vec_type>, AxisAlignedBox<T>&> {
 			const auto s = static_cast<vec_type>(scale);
 			min *= s;
@@ -110,7 +111,7 @@ namespace eng {
 		}
 		// scale bounding box
 		template<typename U>
-		auto operator *=(const U scale) ->
+		auto operator *=(const U scale) noexcept ->
 				std::enable_if_t<std::is_convertible_v<U, T>, AxisAlignedBox<T>&> {
 			const auto s = static_cast<T>(scale);
 			min *= s;
@@ -119,7 +120,7 @@ namespace eng {
 		}
 		// scale bounding box
 		template<typename U>
-		auto operator /=(const glm::vec<3, U>& scale) ->
+		auto operator /=(const glm::vec<3, U>& scale) noexcept ->
 				std::enable_if_t<std::is_convertible_v<glm::vec<3, U>, vec_type>, AxisAlignedBox<T>&> {
 			const auto s = static_cast<vec_type>(scale);
 			min /= s;
@@ -128,14 +129,14 @@ namespace eng {
 		}
 		// scale bounding box
 		template<typename U>
-		auto operator /=(const U scale) ->
+		auto operator /=(const U scale) noexcept ->
 				std::enable_if_t<std::is_convertible_v<U, T>, AxisAlignedBox<T>&> {
 			const auto s = static_cast<T>(scale);
 			min /= s;
 			max /= s;
 			return *this;
 		}
-		
+
 		// union of 2 bounding boxes
 		template<typename U>
 		auto operator |=(const AxisAlignedBox<U>& b) ->
@@ -154,16 +155,16 @@ namespace eng {
 		}
 
 		template<typename U>
-		auto getExpanded(const U d) const -> AxisAlignedBox<std::common_type_t<U, T>> {
+		auto getExpanded(const U d) const noexcept -> AxisAlignedBox<std::common_type_t<U, T>> {
 			using ret_val_type = std::common_type_t<U, T>;
 			using ret_vec_type = glm::vec<3, ret_val_type>;
 			return {
-				static_cast<glm::vec<3, ret_val_type>>(min) - static_cast<ret_val_type>(d),
-				static_cast<glm::vec<3, ret_val_type>>(max) + static_cast<ret_val_type>(d),
+				static_cast<ret_vec_type>(min) - static_cast<ret_val_type>(d),
+				static_cast<ret_vec_type>(max) + static_cast<ret_val_type>(d),
 			};
 		}
 		template<typename U>
-		auto getExpanded(const glm::vec<3, U>& d) const -> AxisAlignedBox<std::common_type_t<U, T>> {
+		auto getExpanded(const glm::vec<3, U>& d) const noexcept -> AxisAlignedBox<std::common_type_t<U, T>> {
 			using ret_vec_type = glm::vec<3, std::common_type_t<U, T>>;
 			return {
 				static_cast<ret_vec_type>(min) - static_cast<ret_vec_type>(d),
@@ -171,11 +172,11 @@ namespace eng {
 			};
 		}
 		template<typename U>
-		auto getContracted(const U d) const -> AxisAlignedBox<std::common_type_t<U, T>> {
+		auto getContracted(const U d) const noexcept -> AxisAlignedBox<std::common_type_t<U, T>> {
 			return getExpanded(-d);
 		}
 		template<typename U>
-		auto getContracted(const glm::vec<3, U>& d) const -> AxisAlignedBox<std::common_type_t<U, T>> {
+		auto getContracted(const glm::vec<3, U>& d) const noexcept -> AxisAlignedBox<std::common_type_t<U, T>> {
 			return getExpanded(-d);
 		}
 
@@ -199,14 +200,14 @@ namespace eng {
 			return { rMin, rMax };
 		}
 
-		vec_type getNegativeVert(const glm::vec3& normal) const {
+		vec_type getNegativeVert(const glm::vec3& normal) const noexcept {
 			return {
 				(normal.x < 0) ? max.x : min.x,
 				(normal.y < 0) ? max.y : min.y,
 				(normal.z < 0) ? max.z : min.z,
 			};
 		}
-		vec_type getNegativeVert(const glm::dvec3& normal) const {
+		vec_type getNegativeVert(const glm::dvec3& normal) const noexcept {
 			return {
 				(normal.x < 0) ? max.x : min.x,
 				(normal.y < 0) ? max.y : min.y,
@@ -220,7 +221,7 @@ namespace eng {
 				(normal.z > 0) ? max.z : min.z,
 			};
 		}
-		vec_type getPositiveVert(const glm::dvec3 normal) const {
+		vec_type getPositiveVert(const glm::dvec3 normal) const noexcept {
 			return {
 				(normal.x > 0) ? max.x : min.x,
 				(normal.y > 0) ? max.y : min.y,
@@ -326,38 +327,56 @@ namespace eng {
 
 	// offset bounding box
 	template<typename T, typename U>
-	auto operator +(AxisAlignedBox<T> lhs, const glm::vec<3, U>& offset) ->
+	auto operator +(AxisAlignedBox<T> lhs, const glm::vec<3, U>& offset) noexcept ->
 			std::enable_if_t<std::is_convertible_v<glm::vec<3, U>, typename AxisAlignedBox<T>::vec_type>, AxisAlignedBox<T>> {
 		return lhs += offset;
 	}
 	// offset bounding box
 	template<typename T, typename U>
-	auto operator -(AxisAlignedBox<T> lhs, const glm::vec<3, U>& offset) ->
+	auto operator +(const glm::vec<3, U>& offset, AxisAlignedBox<T> rhs) noexcept ->
+			std::enable_if_t<std::is_convertible_v<glm::vec<3, U>, typename AxisAlignedBox<T>::vec_type>, AxisAlignedBox<T>> {
+		return rhs += offset;
+	}
+	// offset bounding box
+	template<typename T, typename U>
+	auto operator -(AxisAlignedBox<T> lhs, const glm::vec<3, U>& offset) noexcept ->
 			std::enable_if_t<std::is_convertible_v<glm::vec<3, U>, typename AxisAlignedBox<T>::vec_type>, AxisAlignedBox<T>> {
 		return lhs -= offset;
 	}
 
 	// scale bounding box
 	template<typename T, typename U>
-	auto operator *(AxisAlignedBox<T> lhs, const glm::vec<3, U>& scale) ->
+	auto operator *(AxisAlignedBox<T> lhs, const glm::vec<3, U>& scale) noexcept ->
 			std::enable_if_t<std::is_convertible_v<glm::vec<3, U>, typename AxisAlignedBox<T>::vec_type>, AxisAlignedBox<T>> {
 		return lhs *= scale;
 	}
 	// scale bounding box
 	template<typename T, typename U>
-	auto operator *(AxisAlignedBox<T> lhs, const U scale) ->
+	auto operator *(AxisAlignedBox<T> lhs, const U scale) noexcept ->
 			std::enable_if_t<std::is_convertible_v<U, T>, AxisAlignedBox<T>> {
 		return lhs *= scale;
 	}
 	// scale bounding box
 	template<typename T, typename U>
-	auto operator /(AxisAlignedBox<T> lhs, const glm::vec<3, U>& scale) ->
+	auto operator *(const glm::vec<3, U>& scale, AxisAlignedBox<T> rhs) noexcept ->
+			std::enable_if_t<std::is_convertible_v<glm::vec<3, U>, typename AxisAlignedBox<T>::vec_type>, AxisAlignedBox<T>> {
+		return rhs *= scale;
+	}
+	// scale bounding box
+	template<typename T, typename U>
+	auto operator *(const U scale, AxisAlignedBox<T> rhs) noexcept ->
+			std::enable_if_t<std::is_convertible_v<U, T>, AxisAlignedBox<T>> {
+		return rhs *= scale;
+	}
+	// scale bounding box
+	template<typename T, typename U>
+	auto operator /(AxisAlignedBox<T> lhs, const glm::vec<3, U>& scale) noexcept ->
 			std::enable_if_t<std::is_convertible_v<glm::vec<3, U>, typename AxisAlignedBox<T>::vec_type>, AxisAlignedBox<T>> {
 		return lhs /= scale;
 	}
 	// scale bounding box
 	template<typename T, typename U>
-	auto operator /(AxisAlignedBox<T> lhs, const U scale) ->
+	auto operator /(AxisAlignedBox<T> lhs, const U scale) noexcept ->
 			std::enable_if_t<std::is_convertible_v<U, T>, AxisAlignedBox<T>> {
 		return lhs /= scale;
 	}

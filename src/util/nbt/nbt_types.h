@@ -28,6 +28,15 @@ namespace nbt {
     using nbt_int_array = std::vector<nbt_int>;
     using nbt_long_array = std::vector<nbt_long>;
 
+    static_assert(sizeof(nbt_byte) == 1);
+    static_assert(sizeof(nbt_short) == 2);
+    static_assert(sizeof(nbt_int) == 4);
+    static_assert(sizeof(nbt_long) == 8);
+    static_assert(sizeof(nbt_float) == 4);
+    static_assert(sizeof(nbt_double) == 8);
+    static_assert(std::numeric_limits<nbt_float>::is_iec559);
+    static_assert(std::numeric_limits<nbt_double>::is_iec559);
+
     enum class TagType {
         End = 0,
         Byte = 1,

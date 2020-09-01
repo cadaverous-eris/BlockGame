@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <cstdint>
 #include <initializer_list>
+#include <span>
 
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
@@ -80,7 +81,8 @@ namespace eng {
 
 	public:
 
-		[[nodiscard]] static Font loadFont(const std::string& filePath, ::std::initializer_list<std::string> = {});
+		[[nodiscard]] static Font loadFont(const std::string& filePath, std::initializer_list<std::string> = {});
+		[[nodiscard]] static Font loadFont(const std::string& filePath, std::span<const std::string>);
 
 		Font(const Font&) = delete;
 		[[nodiscard]] Font(Font&&) = default;

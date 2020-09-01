@@ -4,7 +4,6 @@
 #include <type_traits>
 
 #include "render/Renderer.h"
-#include "util/text/unicode_utils.h"
 
 #include <iostream> // TODO: remove
 #include <glm/gtx/io.hpp> // TODO: remove
@@ -19,12 +18,18 @@ namespace eng {
 		fontShader.createUniform("pixelDistScale");
 		fontShader.createUniform("textureSampler");
 		fontShader.createUniform("mvpMatrix");
+		underlineShader.createUniform("mvpMatrix");
 
-		// VAO and VBO setup
+		// font VAO and VBO setup
 		fontVAO.bind(); // bind the block VAO
 		fontVBO.setData(nullptr, 0, VertexBuffer::DrawHint::STREAM);
 		fontVBO.bind();
 		fontVAO.setVertexFormat(FontQuad::format);
+		// underline VAO and VBO setup
+		underlineVAO.bind();
+		underlineVBO.setData(nullptr, 0, VertexBuffer::DrawHint::STREAM);
+		underlineVBO.bind();
+		underlineVAO.setVertexFormat(LineVert::format);
 	}
 
 
@@ -37,32 +42,54 @@ namespace eng {
 	void FontRenderer::flush() {
 		const glm::mat4& orthoMatrix = renderer->getOrthoMatrix();
 
-		font.getTexture().bind();
+		if (!underlineBuffer.empty()) {
+			underlineShader.bind();
+			underlineShader.setUniform("mvpMatrix", orthoMatrix);
 
-		fontShader.bind();
-		fontShader.setUniform("framebufferSize", static_cast<glm::vec2>(renderer->getWindowSizeScaled()));
-		fontShader.setUniform("edgeVal", FontRenderer::sdf_on_edge_value / 255.0f);
-		fontShader.setUniform("padding", static_cast<float>(FontRenderer::sdf_padding));
-		fontShader.setUniform("pixelDistScale", FontRenderer::sdf_pixel_dist_scale);
-		fontShader.setUniform("textureSampler", 0);
-		fontShader.setUniform("mvpMatrix", orthoMatrix);
+			glEnable(GL_CULL_FACE);
+			glDepthMask(GL_FALSE);
+			glEnable(GL_DEPTH_TEST);
+			glEnable(GL_BLEND);
+			//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 
-		glEnable(GL_CULL_FACE);
-		glDepthMask(GL_TRUE);
-		glEnable(GL_DEPTH_TEST);
-		glDepthFunc(GL_LEQUAL);
-		glEnable(GL_BLEND);
-		//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+			underlineVAO.bind();
+			underlineVBO.setData(std::span(underlineBuffer.data(), underlineBuffer.size()));
+			underlineVAO.draw(DrawMode::LINES, 0, underlineBuffer.size());
 
-		fontVAO.bind();
-		fontVBO.setData(std::span(vertexDataBuffer.data(), vertexDataBuffer.size()));
-		fontVAO.draw(DrawMode::POINTS, 0, vertexDataBuffer.size());
+			glDisable(GL_BLEND);
+			glDepthMask(GL_TRUE);
 
-		glDepthFunc(GL_LESS);
-		glDisable(GL_BLEND);
+			underlineBuffer.clear();
+		}
+		if (!fontQuadBuffer.empty()) {
+			font.getTexture().bind();
 
-		vertexDataBuffer.clear();
+			fontShader.bind();
+			fontShader.setUniform("framebufferSize", static_cast<glm::vec2>(renderer->getWindowSizeScaled()));
+			fontShader.setUniform("edgeVal", FontRenderer::sdf_on_edge_value / 255.0f);
+			fontShader.setUniform("padding", static_cast<float>(FontRenderer::sdf_padding));
+			fontShader.setUniform("pixelDistScale", FontRenderer::sdf_pixel_dist_scale);
+			fontShader.setUniform("textureSampler", 0);
+			fontShader.setUniform("mvpMatrix", orthoMatrix);
+
+			glEnable(GL_CULL_FACE);
+			glDepthMask(GL_TRUE);
+			glEnable(GL_DEPTH_TEST);
+			glDepthFunc(GL_LEQUAL);
+			glEnable(GL_BLEND);
+			//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+
+			fontVAO.bind();
+			fontVBO.setData(std::span(fontQuadBuffer.data(), fontQuadBuffer.size()));
+			fontVAO.draw(DrawMode::POINTS, 0, fontQuadBuffer.size());
+
+			glDepthFunc(GL_LESS);
+			glDisable(GL_BLEND);
+
+			fontQuadBuffer.clear();
+		}
 	}
 
 	float FontRenderer::getFontSizeForLineHeight(const float lineHeight) const {
@@ -103,15 +130,27 @@ namespace eng {
 			(c == 0x3000) || (c == 0xFEFF);
 	}
 
-	float FontRenderer::drawText(std::string_view text, const glm::vec2& origin, float fontSize, const Color& color, const FontOutline& outline) {
-		return drawText(unicode::utf8ToUtf32(text), origin, fontSize, color, outline);
-	}
-	float FontRenderer::drawText(std::u8string_view text, const glm::vec2& origin, float fontSize, const Color& color, const FontOutline& outline) {
-		return drawText(unicode::utf8ToUtf32(text), origin, fontSize, color, outline);
-	}
-	float FontRenderer::drawText(std::u32string_view text, const glm::vec2& origin, float fontSize, const Color& color, const FontOutline& outline) {
+
+	float FontRenderer::getTextWidth(std::u32string_view text, const float fontSize) const {
 		const float scale = fontSize / (font.fontData.ascent - font.fontData.descent);
-		const float baselineOffset = ((font.fontData.lineGap * 0.5f) + font.fontData.ascent) * scale; // distance from top of a line of text to the baseline
+		float width = 0;
+		const Glyph* prevGlyph = nullptr;
+		for (const auto& codepoint : text) {
+			const Glyph& glyph = font.getGlyph(codepoint);
+			if (prevGlyph)
+				width += font.getKernAdvance(*prevGlyph, glyph) * scale; // apply kerning
+			width += glyph.xAdvance * scale;
+
+			prevGlyph = &glyph;
+		}
+		return width;
+	}
+
+
+	float FontRenderer::drawTextToBuffer(FontQuadBuffer& fontQuads, LineBuffer& underlineVerts, std::u32string_view text, const glm::vec2& origin, float fontSize, const Color& color, const FontOutline& outline, const bool underline) const {
+		const float scale = fontSize / (font.fontData.ascent - font.fontData.descent);
+		const float unscaledBaselineOffset = (font.fontData.lineGap * 0.5f) + font.fontData.ascent; // unscaled distance from top of a line of text to the baseline
+		const float baselineOffset = unscaledBaselineOffset * scale; // distance from top of a line of text to the baseline
 
 		float width = 0;
 		glm::vec2 pos { origin.x, origin.y + baselineOffset };
@@ -130,7 +169,19 @@ namespace eng {
 			const glm::vec2 uvMin = glyph.getMinUV();
 			const glm::vec2 uvMax = glyph.getMaxUV();
 
-			vertexDataBuffer.emplace_back(
+			// TODO: add a way to draw bold text
+			// italicized font rendering
+			//constexpr float slant = 0.15f; // amount to offset the x coordinates of the font quad based on the font size
+			//const float slantOffset = slant * fontSize;
+			//quadBuffer.emplace_back(
+			//	FontVert { { gOrig.x + slantOffset, gOrig.y }, uvMin },
+			//	FontVert { { gOrig.x - slantOffset, gOrig.y + glyphSize.y }, { uvMin.x, uvMax.y } },
+			//	FontVert { { gOrig.x + slantOffset + glyphSize.x, gOrig.y }, { uvMax.x, uvMin.y } },
+			//	FontVert { { gOrig.x - slantOffset + glyphSize.x, gOrig.y + glyphSize.y }, uvMax },
+			//	color, outline.color, outline.size, outline.spread
+			//);
+			// regular font rendering
+			fontQuads.emplace_back(
 				FontVert { gOrig, uvMin },
 				FontVert { { gOrig.x, gOrig.y + glyphSize.y }, { uvMin.x, uvMax.y } },
 				FontVert { { gOrig.x + glyphSize.x, gOrig.y }, { uvMax.x, uvMin.y } },
@@ -144,28 +195,14 @@ namespace eng {
 
 			prevGlyph = &glyph;
 		}
-		return width;
-	}
+		if (underline) {
+			const float underlineOffset = (unscaledBaselineOffset - (1.0f * font.fontData.descent)) * scale; // distance from the top of a line to the underline
 
-
-	float FontRenderer::getTextWidth(std::string_view text, const float fontSize) const {
-		return getTextWidth(unicode::utf8ToUtf32(text), fontSize);
-	}
-	float FontRenderer::getTextWidth(std::u8string_view text, const float fontSize) const {
-		return getTextWidth(unicode::utf8ToUtf32(text), fontSize);
-	}
-	float FontRenderer::getTextWidth(std::u32string_view text, const float fontSize) const {
-		const float scale = fontSize / (font.fontData.ascent - font.fontData.descent);
-		float width = 0;
-		const Glyph* prevGlyph = nullptr;
-		for (const auto& codepoint : text) {
-			const Glyph& glyph = font.getGlyph(codepoint);
-			if (prevGlyph)
-				width += font.getKernAdvance(*prevGlyph, glyph) * scale; // apply kerning
-			width += glyph.xAdvance * scale;
-
-			prevGlyph = &glyph;
+			const float ulY = origin.y + underlineOffset;
+			underlineVerts.emplace_back(glm::vec2(origin.x, ulY), color);
+			underlineVerts.emplace_back(glm::vec2(origin.x + width, ulY), color);
 		}
+
 		return width;
 	}
 

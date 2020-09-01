@@ -54,21 +54,12 @@ namespace eng {
 			0x0000007F_c
 		);
 		uiRenderer.flushColored();
-		fontRenderer.drawText(gameState.getSelectedBlock()->getName(), blockNameTextOrigin, blockNameFontSize, 0xFFF_c, { /*0.0f, 2.5f, 0x000000BF_c*/ });
-		{
-			const float ascent = fontRenderer.getFontAscent(blockNameFontSize);
-			const float descent = fontRenderer.getFontDescent(blockNameFontSize);
-			const float lineGap = fontRenderer.getFontLineGap(blockNameFontSize);
-			const auto blockNameULy = blockNameTextOrigin.y + (0.5f * lineGap) + ascent - (1.0f * descent);
-			uiRenderer.drawLine({ blockNameTextOrigin.x, blockNameULy }, { blockNameTextOrigin.x + blockNameLength, blockNameULy }, 0xFFF_c);
-			uiRenderer.flushLines();
-		}
+		fontRenderer.drawText(gameState.getSelectedBlock()->getName(), blockNameTextOrigin, blockNameFontSize, 0xFFF_c, { /*0.0f, 2.5f, 0x000000BF_c*/ }, true);
 
 		using namespace std::string_literals;
 		using namespace std::string_view_literals;
 		/*const auto testingText = u8"The quick brown fox jumps over the lazy dog. \u0394\u0398\u03A3\u03A6\u03A8\u03A9 \U0001F480 \U0001F571 \U0001F440 \U0001F435\U0001F44D \U0001F4A3 \U0001F494 \U0001F607 \U0001F608 \U0001F5E1\U0001F30E \U0001F631 \u26E7\u26B8 \u26A5 \u16C3 \u2620 \U0001F9B4";
 		const auto testingText2 = u8"I \U0001F5A4 Unicode \U00013010\U000130B8 \u26E7";
-
 		const float fontSizes[] { 24 };// { 128, 96, 64, 48, 36, 26, 18, 16, 14, 12 };
 		glm::vec2 pos { 10, 10 };
 		for (const auto fontSize : fontSizes) {

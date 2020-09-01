@@ -14,8 +14,10 @@
 #include "render/VertexBuffer.h"
 #include "render/ShaderProgram.h"
 #include "FontQuad.h"
+#include "render/ui/UIVert.h"
 #include "Font.h"
 #include "util/Color.h"
+#include "util/text/unicode_utils.h"
 
 namespace eng {
 
@@ -38,14 +40,28 @@ namespace eng {
 		static constexpr unsigned char sdf_on_edge_value = 180;
 		static constexpr float sdf_pixel_dist_scale = 30.0f;
 
+		// struct containing info about the size of drawn text
+		struct TextSizeResult {
+			float width, height;
+			int lines = 1;
+		};
+
+		using LineVert = UIVertColor;
+
+		using FontQuadBuffer = std::vector<FontQuad>;
+		using LineBuffer = std::vector<LineVert>;
+
 	private:
 
 		Renderer* renderer;
 
 		VertexArray fontVAO;
 		VertexBuffer fontVBO;
+		VertexArray underlineVAO;
+		VertexBuffer underlineVBO;
 
 		ShaderProgram fontShader = ShaderProgram::load("text/sdf.vert", "text/sdf.frag", "text/sdf.geom");
+		ShaderProgram underlineShader = ShaderProgram::load("text/underline.vert", "text/underline.frag");
 
 		// TODO: get from font config
 		//Font font = Font::loadFont("Quivira.otf");
@@ -61,11 +77,11 @@ namespace eng {
 		//Font font = Font::loadFont("Kelvinch-Roman.otf");
 		//Font font = Font::loadFont("LiberationSans-Regular.ttf");
 
-		std::vector<FontQuad> vertexDataBuffer;
-
+		FontQuadBuffer fontQuadBuffer;
+		LineBuffer underlineBuffer;
 
 	public:
-		
+
 		FontRenderer(Renderer* const);
 
 		FontRenderer(const FontRenderer&) = delete;
@@ -79,12 +95,31 @@ namespace eng {
 		void flush();
 
 
-		float drawText(std::string_view text, const glm::vec2& origin, float fontSize, const Color& color = 0xFFF_c, const FontOutline& outline = {});
-		float drawText(std::u8string_view text, const glm::vec2& origin, float fontSize, const Color& color = 0xFFF_c, const FontOutline& outline = {});
-		float drawText(std::u32string_view text, const glm::vec2& origin, float fontSize, const Color& color = 0xFFF_c, const FontOutline& outline = {});
+		inline float drawText(std::string_view text, const glm::vec2& origin, float fontSize, const Color& color = 0xFFF_c, const FontOutline& outline = {}, const bool underline = false) {
+			return drawTextToBuffer(fontQuadBuffer, underlineBuffer, text, origin, fontSize, color, outline, underline);
+		}
+		inline float drawText(std::u8string_view text, const glm::vec2& origin, float fontSize, const Color& color = 0xFFF_c, const FontOutline& outline = {}, const bool underline = false) {
+			return drawTextToBuffer(fontQuadBuffer, underlineBuffer, text, origin, fontSize, color, outline, underline);
+		}
+		inline float drawText(std::u32string_view text, const glm::vec2& origin, float fontSize, const Color& color = 0xFFF_c, const FontOutline& outline = {}, const bool underline = false) {
+			return drawTextToBuffer(fontQuadBuffer, underlineBuffer, text, origin, fontSize, color, outline, underline);
+		}
 
-		float getTextWidth(std::string_view text, const float fontSize) const;
-		float getTextWidth(std::u8string_view text, const float fontSize) const;
+		inline float drawTextToBuffer(FontQuadBuffer& quadBuffer, LineBuffer& lineBuffer, std::string_view text, const glm::vec2& origin, float fontSize, const Color& color = 0xFFF_c, const FontOutline& outline = {}, bool underline = false) const {
+			return drawTextToBuffer(quadBuffer, lineBuffer, unicode::utf8ToUtf32(text), origin, fontSize, color, outline, underline);
+		}
+		inline float drawTextToBuffer(FontQuadBuffer& quadBuffer, LineBuffer& lineBuffer, std::u8string_view text, const glm::vec2& origin, float fontSize, const Color& color = 0xFFF_c, const FontOutline& outline = {}, bool underline = false) const {
+			return drawTextToBuffer(quadBuffer, lineBuffer, unicode::utf8ToUtf32(text), origin, fontSize, color, outline, underline);
+		}
+		float drawTextToBuffer(FontQuadBuffer& quadBuffer, LineBuffer& lineBuffer, std::u32string_view text, const glm::vec2& origin, float fontSize, const Color& color = 0xFFF_c, const FontOutline& outline = {}, bool underline = false) const;
+
+
+		inline float getTextWidth(std::string_view text, const float fontSize) const {
+			return getTextWidth(unicode::utf8ToUtf32(text), fontSize);
+		}
+		inline float getTextWidth(std::u8string_view text, const float fontSize) const {
+			return getTextWidth(unicode::utf8ToUtf32(text), fontSize);
+		}
 		float getTextWidth(std::u32string_view text, const float fontSize) const;
 
 		float getFontSizeForLineHeight(const float lineHeight) const;
@@ -95,7 +130,7 @@ namespace eng {
 		float getFontLineHeight(const float fontSize) const;
 		float getFontLineGap(const float fontSize) const;
 
-	private:
+	protected:
 
 
 
