@@ -25,10 +25,23 @@ namespace eng {
 		Left, Center, Right
 	};
 
-	struct FontOutline {
+	struct TextOutline {
 		float size = 0.0f;
 		float spread = 0.0f;
 		Color color { 0, 0, 0, 0 };
+	};
+
+	struct TextWrapResult {
+		struct Line {
+			size_t startPos, endPos;
+			std::u32string_view text;
+			float width;
+		};
+		float width; // the width of the area the text was drawn in
+		float height; // the height of the area the text was drawn in
+		size_t startPos;
+		size_t endPos; // the index of the first character of the input string that was unable to fit within the area
+		std::vector<Line> lines;
 	};
 
 	class Renderer;
@@ -40,16 +53,35 @@ namespace eng {
 		static constexpr unsigned char sdf_on_edge_value = 180;
 		static constexpr float sdf_pixel_dist_scale = 30.0f;
 
-		// struct containing info about the size of drawn text
-		struct TextSizeResult {
-			float width, height;
-			int lines = 1;
+		struct MultilineConfig {
+			glm::vec2 area;
+			size_t maxLines = 0;
+			TextAlign textAlign = TextAlign::Left;
+
+			explicit MultilineConfig(const glm::vec2& area) noexcept :
+					area(area), maxLines(0), textAlign(TextAlign::Left) {}
+			explicit MultilineConfig(float maxWidth) noexcept :
+					area(maxWidth, 0), maxLines(0), textAlign(TextAlign::Left) {}
+			MultilineConfig(const glm::vec2& area, size_t maxLines, TextAlign textAlign = TextAlign::Left) noexcept :
+					area(area), maxLines(maxLines), textAlign(textAlign) {}
+			MultilineConfig(float maxWidth, size_t maxLines, TextAlign textAlign = TextAlign::Left) noexcept :
+					area(maxWidth, 0), maxLines(maxLines), textAlign(textAlign) {}
+			MultilineConfig(const glm::vec2& area, TextAlign textAlign) noexcept :
+					area(area), maxLines(0), textAlign(textAlign) {}
+			MultilineConfig(float maxWidth, TextAlign textAlign) noexcept :
+					area(maxWidth, 0), maxLines(0), textAlign(textAlign) {}
 		};
 
-		using LineVert = UIVertColor;
+		using ColorVert = UIVertColor;
 
 		using FontQuadBuffer = std::vector<FontQuad>;
-		using LineBuffer = std::vector<LineVert>;
+		using ColorVertBuffer = std::vector<ColorVert>;
+
+		struct TextVertexBuffers {
+			FontQuadBuffer fontQuadBuffer;
+			ColorVertBuffer underlineBuffer;
+			//ColorVertBuffer backgroundBuffer; // TODO: add ability to render text with highlight
+		};
 
 	private:
 
@@ -77,8 +109,9 @@ namespace eng {
 		//Font font = Font::loadFont("Kelvinch-Roman.otf");
 		//Font font = Font::loadFont("LiberationSans-Regular.ttf");
 
-		FontQuadBuffer fontQuadBuffer;
-		LineBuffer underlineBuffer;
+		//FontQuadBuffer fontQuadBuffer;
+		//LineBuffer underlineBuffer;
+		TextVertexBuffers textVertBuffers;
 
 	public:
 
@@ -95,23 +128,46 @@ namespace eng {
 		void flush();
 
 
-		inline float drawText(std::string_view text, const glm::vec2& origin, float fontSize, const Color& color = 0xFFF_c, const FontOutline& outline = {}, const bool underline = false) {
-			return drawTextToBuffer(fontQuadBuffer, underlineBuffer, text, origin, fontSize, color, outline, underline);
+		inline float drawText(std::string_view text, const glm::vec3& origin, float fontSize, const Color& color = 0xFFF_c, const TextOutline& outline = {}, const bool underline = false) {
+			return drawTextToBuffer(textVertBuffers, text, origin, fontSize, color, outline, underline);
 		}
-		inline float drawText(std::u8string_view text, const glm::vec2& origin, float fontSize, const Color& color = 0xFFF_c, const FontOutline& outline = {}, const bool underline = false) {
-			return drawTextToBuffer(fontQuadBuffer, underlineBuffer, text, origin, fontSize, color, outline, underline);
+		inline float drawText(std::u8string_view text, const glm::vec3& origin, float fontSize, const Color& color = 0xFFF_c, const TextOutline& outline = {}, const bool underline = false) {
+			return drawTextToBuffer(textVertBuffers, text, origin, fontSize, color, outline, underline);
 		}
-		inline float drawText(std::u32string_view text, const glm::vec2& origin, float fontSize, const Color& color = 0xFFF_c, const FontOutline& outline = {}, const bool underline = false) {
-			return drawTextToBuffer(fontQuadBuffer, underlineBuffer, text, origin, fontSize, color, outline, underline);
+		inline float drawText(std::u32string_view text, const glm::vec3& origin, float fontSize, const Color& color = 0xFFF_c, const TextOutline& outline = {}, const bool underline = false) {
+			return drawTextToBuffer(textVertBuffers, text, origin, fontSize, color, outline, underline);
+		}
+		inline float drawText(std::string_view text, const glm::vec2& origin, float fontSize, const Color& color = 0xFFF_c, const TextOutline& outline = {}, const bool underline = false) {
+			return drawTextToBuffer(textVertBuffers, text, glm::vec3(origin, 0), fontSize, color, outline, underline);
+		}
+		inline float drawText(std::u8string_view text, const glm::vec2& origin, float fontSize, const Color& color = 0xFFF_c, const TextOutline& outline = {}, const bool underline = false) {
+			return drawTextToBuffer(textVertBuffers, text, glm::vec3(origin, 0), fontSize, color, outline, underline);
+		}
+		inline float drawText(std::u32string_view text, const glm::vec2& origin, float fontSize, const Color& color = 0xFFF_c, const TextOutline& outline = {}, const bool underline = false) {
+			return drawTextToBuffer(textVertBuffers, text, glm::vec3(origin, 0), fontSize, color, outline, underline);
 		}
 
-		inline float drawTextToBuffer(FontQuadBuffer& quadBuffer, LineBuffer& lineBuffer, std::string_view text, const glm::vec2& origin, float fontSize, const Color& color = 0xFFF_c, const FontOutline& outline = {}, bool underline = false) const {
-			return drawTextToBuffer(quadBuffer, lineBuffer, unicode::utf8ToUtf32(text), origin, fontSize, color, outline, underline);
+		inline float drawTextToBuffer(TextVertexBuffers& textBuffers, std::string_view text, const glm::vec3& origin, float fontSize, const Color& color = 0xFFF_c, const TextOutline& outline = {}, bool underline = false) const {
+			return drawTextToBuffer(textBuffers, unicode::utf8ToUtf32(text), origin, fontSize, color, outline, underline);
 		}
-		inline float drawTextToBuffer(FontQuadBuffer& quadBuffer, LineBuffer& lineBuffer, std::u8string_view text, const glm::vec2& origin, float fontSize, const Color& color = 0xFFF_c, const FontOutline& outline = {}, bool underline = false) const {
-			return drawTextToBuffer(quadBuffer, lineBuffer, unicode::utf8ToUtf32(text), origin, fontSize, color, outline, underline);
+		inline float drawTextToBuffer(TextVertexBuffers& textBuffers, std::u8string_view text, const glm::vec3& origin, float fontSize, const Color& color = 0xFFF_c, const TextOutline& outline = {}, bool underline = false) const {
+			return drawTextToBuffer(textBuffers, unicode::utf8ToUtf32(text), origin, fontSize, color, outline, underline);
 		}
-		float drawTextToBuffer(FontQuadBuffer& quadBuffer, LineBuffer& lineBuffer, std::u32string_view text, const glm::vec2& origin, float fontSize, const Color& color = 0xFFF_c, const FontOutline& outline = {}, bool underline = false) const;
+		float drawTextToBuffer(TextVertexBuffers& textBuffers, std::u32string_view text, const glm::vec3& origin, float fontSize, const Color& color = 0xFFF_c, const TextOutline& outline = {}, bool underline = false) const;
+		inline float drawTextToBuffer(TextVertexBuffers& textBuffers, std::string_view text, const glm::vec2& origin, float fontSize, const Color& color = 0xFFF_c, const TextOutline& outline = {}, bool underline = false) const {
+			return drawTextToBuffer(textBuffers, unicode::utf8ToUtf32(text), glm::vec3(origin, 0), fontSize, color, outline, underline);
+		}
+		inline float drawTextToBuffer(TextVertexBuffers& textBuffers, std::u8string_view text, const glm::vec2& origin, float fontSize, const Color& color = 0xFFF_c, const TextOutline& outline = {}, bool underline = false) const {
+			return drawTextToBuffer(textBuffers, unicode::utf8ToUtf32(text), glm::vec3(origin, 0), fontSize, color, outline, underline);
+		}
+		inline float drawTextToBuffer(TextVertexBuffers& textBuffers, std::u32string_view text, const glm::vec2& origin, float fontSize, const Color& color = 0xFFF_c, const TextOutline& outline = {}, bool underline = false) const {
+			return drawTextToBuffer(textBuffers, text, glm::vec3(origin, 0), fontSize, color, outline, underline);
+		}
+
+		void drawCursor(const glm::vec3& origin, float fontSize, const Color& color = 0xFFF_c);
+		inline void drawCursor(const glm::vec2& origin, float fontSize, const Color& color = 0xFFF_c) {
+			drawCursor(glm::vec3(origin, 0), fontSize, color);
+		}
 
 
 		inline float getTextWidth(std::string_view text, const float fontSize) const {
@@ -129,6 +185,38 @@ namespace eng {
 		float getFontDescent(const float fontSize) const;
 		float getFontLineHeight(const float fontSize) const;
 		float getFontLineGap(const float fontSize) const;
+
+
+		TextWrapResult splitLines(std::u32string_view text, float fontSize, const MultilineConfig& multilineConfig, size_t startIndex = 0) const;
+
+		void drawMultilineTextToBuffer(TextVertexBuffers& textBuffers, const TextWrapResult& textWrapRes, const MultilineConfig& multilineConfig, const glm::vec3& origin, float fontSize, const Color& color = 0xFFF_c, const TextOutline& outline = {}, bool underline = false) const;
+		inline void drawMultilineTextToBuffer(TextVertexBuffers& textBuffers, const TextWrapResult& textWrapRes, const MultilineConfig& multilineConfig, const glm::vec2& origin, float fontSize, const Color& color = 0xFFF_c, const TextOutline& outline = {}, bool underline = false) const {
+			drawMultilineTextToBuffer(textBuffers, textWrapRes, multilineConfig, glm::vec3(origin, 0), fontSize, color, outline, underline);
+		}
+
+		inline void drawMultilineText(const TextWrapResult& textWrapRes, const MultilineConfig& multilineConfig, const glm::vec3& origin, float fontSize, const Color& color = 0xFFF_c, const TextOutline& outline = {}, const bool underline = false) {
+			drawMultilineTextToBuffer(textVertBuffers, textWrapRes, multilineConfig, origin, fontSize, color, outline, underline);
+		}
+		inline void drawMultilineText(const TextWrapResult& textWrapRes, const MultilineConfig& multilineConfig, const glm::vec2& origin, float fontSize, const Color& color = 0xFFF_c, const TextOutline& outline = {}, const bool underline = false) {
+			drawMultilineTextToBuffer(textVertBuffers, textWrapRes, multilineConfig, glm::vec3(origin, 0), fontSize, color, outline, underline);
+		}
+
+		TextWrapResult drawMultilineText(std::u32string_view text, size_t startIndex, const MultilineConfig& multilineConfig, const glm::vec3& origin, float fontSize, const Color& color = 0xFFF_c, const TextOutline& outline = {}, const bool underline = false);
+		inline TextWrapResult drawMultilineText(std::u32string_view text, size_t startIndex, const MultilineConfig& multilineConfig, const glm::vec2& origin, float fontSize, const Color& color = 0xFFF_c, const TextOutline& outline = {}, const bool underline = false) {
+			return drawMultilineText(text, startIndex, multilineConfig, glm::vec3(origin, 0), fontSize, color, outline, underline);
+		}
+		inline TextWrapResult drawMultilineText(std::u8string_view text, const MultilineConfig& multilineConfig, const glm::vec3& origin, float fontSize, const Color& color = 0xFFF_c, const TextOutline& outline = {}, const bool underline = false) {
+			return drawMultilineText(unicode::utf8ToUtf32(text), 0, multilineConfig, origin, fontSize, color, outline, underline);
+		}
+		inline TextWrapResult drawMultilineText(std::u8string_view text, const MultilineConfig& multilineConfig, const glm::vec2& origin, float fontSize, const Color& color = 0xFFF_c, const TextOutline& outline = {}, const bool underline = false) {
+			return drawMultilineText(unicode::utf8ToUtf32(text), 0, multilineConfig, glm::vec3(origin, 0), fontSize, color, outline, underline);
+		}
+		inline TextWrapResult drawMultilineText(std::string_view text, const MultilineConfig& multilineConfig, const glm::vec3& origin, float fontSize, const Color& color = 0xFFF_c, const TextOutline& outline = {}, const bool underline = false) {
+			return drawMultilineText(unicode::utf8ToUtf32(text), 0, multilineConfig, origin, fontSize, color, outline, underline);
+		}
+		inline TextWrapResult drawMultilineText(std::string_view text, const MultilineConfig& multilineConfig, const glm::vec2& origin, float fontSize, const Color& color = 0xFFF_c, const TextOutline& outline = {}, const bool underline = false) {
+			return drawMultilineText(unicode::utf8ToUtf32(text), 0, multilineConfig, glm::vec3(origin, 0), fontSize, color, outline, underline);
+		}
 
 	protected:
 

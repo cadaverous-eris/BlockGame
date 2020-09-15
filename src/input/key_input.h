@@ -1,5 +1,6 @@
 #pragma once
 
+#include <string>
 #include <iostream>
 
 #include <GLFW/glfw3.h>
@@ -158,11 +159,16 @@ namespace eng::input {
 		MOUSE_MIDDLE = GLFW_MOUSE_BUTTON_MIDDLE,
 	};
 
+	std::string to_string(const Keys& namedKey);
+	std::string to_string(const Keys& mouseButton);
+	std::ostream& operator <<(std::ostream& stream, const Keys& namedKey);
+	std::ostream& operator <<(std::ostream& stream, const MouseButtons& mouseButton);
+
 	// Modifier Keys for key and mouse button events
 	class ModifierBits {
 		friend void key_callback(GLFWwindow*, int32_t, int32_t, int32_t, int32_t);
 		friend void mouse_button_callback(GLFWwindow*, int32_t, int32_t, int32_t);
-		
+
 		class BitsRef {
 			friend ModifierBits;
 		private:
@@ -253,6 +259,7 @@ namespace eng::input {
 		static inline constexpr ModifierBits fromByte(const uint8_t bits) noexcept { return ModifierBits(bits); }
 	};
 
+	std::string to_string(const ModifierBits& modifierBits);
 	std::ostream& operator <<(std::ostream& stream, const ModifierBits& modifierBits);
 
 	inline constexpr const ModifierBits ModifierBits::NONE {};
@@ -272,9 +279,43 @@ namespace eng::input {
 		constexpr Key(Keys namedKey) noexcept : type(KeyType::KEY_NAMED), code(static_cast<int>(namedKey)) {}
 		constexpr Key(MouseButtons mouseButton) noexcept : type(KeyType::MOUSE), code(static_cast<int>(mouseButton)) {}
 
+		static constexpr Key fromScanCode(int scanCode) noexcept { return { KeyType::KEY_SCANCODE, scanCode }; }
+
 		constexpr bool operator ==(const Key& rhs) const noexcept { return (type == rhs.type) && (code == rhs.code); }
 		constexpr bool operator !=(const Key& rhs) const noexcept { return (type != rhs.type) || (code != rhs.code); }
+
+		constexpr operator bool() const noexcept {
+			// TODO: return false if (type == KeyType::KEY_SCANCODE) && (code == -1)
+			return (type == KeyType::KEY_NAMED) || (type == KeyType::KEY_SCANCODE) || (type == KeyType::MOUSE);
+		}
 	};
+	constexpr bool operator ==(const Key& key, const Keys namedKey) noexcept {
+		return (key.type == KeyType::KEY_NAMED) && (key.code == static_cast<int>(namedKey));
+	}
+	constexpr bool operator ==(const Keys namedKey, const Key& key) noexcept {
+		return (key.type == KeyType::KEY_NAMED) && (key.code == static_cast<int>(namedKey));
+	}
+	constexpr bool operator !=(const Key& key, const Keys namedKey) noexcept {
+		return (key.type != KeyType::KEY_NAMED) || (key.code != static_cast<int>(namedKey));
+	}
+	constexpr bool operator !=(const Keys namedKey, const Key& key) noexcept {
+		return (key.type != KeyType::KEY_NAMED) || (key.code != static_cast<int>(namedKey));
+	}
+	constexpr bool operator ==(const Key& key, const MouseButtons mouseBtn) noexcept {
+		return (key.type == KeyType::MOUSE) && (key.code == static_cast<int>(mouseBtn));
+	}
+	constexpr bool operator ==(const MouseButtons mouseBtn, const Key& key) noexcept {
+		return (key.type == KeyType::MOUSE) && (key.code == static_cast<int>(mouseBtn));
+	}
+	constexpr bool operator !=(const Key& key, const MouseButtons mouseBtn) noexcept {
+		return (key.type != KeyType::MOUSE) || (key.code != static_cast<int>(mouseBtn));
+	}
+	constexpr bool operator !=(const MouseButtons mouseBtn, const Key& key) noexcept {
+		return (key.type != KeyType::MOUSE) || (key.code != static_cast<int>(mouseBtn));
+	}
+
+	std::string to_string(const Key& key);
+	std::ostream& operator <<(std::ostream& stream, const Key& key);
 
 	// a key and modifiers
 	struct KeyInput {
@@ -284,6 +325,15 @@ namespace eng::input {
 		constexpr bool operator ==(const KeyInput& rhs) const noexcept { return (key == rhs.key) && (modifiers == rhs.modifiers); }
 		constexpr bool operator !=(const KeyInput& rhs) const noexcept { return (key != rhs.key) || (modifiers != rhs.modifiers); }
 	};
+
+	std::string to_string(const KeyInput& keyInput);
+	std::ostream& operator <<(std::ostream& stream, const KeyInput& keyInput);
+
+}
+
+namespace eng {
+
+	using input::to_string;
 
 }
 

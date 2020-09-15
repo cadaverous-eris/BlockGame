@@ -92,7 +92,7 @@ namespace eng {
 	}
 
 	const Image4 missingTextureImage = ([]() -> Image4 {
-		Image4 img = Image4(nullptr, 16u, 16u);
+		Image4 img = Image4(nullptr, 16, 16);
 		for (size_t y = 0; y < img.getHeight(); y++) {
 			for (size_t x = 0; x < img.getWidth(); x++) {
 				const bool b = (x < (img.getWidth() / 2u)) == (y < (img.getHeight() / 2u));

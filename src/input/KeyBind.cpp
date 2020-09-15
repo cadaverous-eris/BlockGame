@@ -16,24 +16,26 @@ namespace eng::input {
 	// map of KeyBind names to KeyBind*s
 	std::map<std::string, KeyBind*> keyBindsNameMap {};
 
-	// movement keys
-	KeyBind* const MOVE_FORWARD = makeKeyBind("move_forward", { Keys::KEY_W });
-	KeyBind* const MOVE_BACKWARD = makeKeyBind("move_backward", { Keys::KEY_S });
-	KeyBind* const MOVE_LEFT = makeKeyBind("move_left", { Keys::KEY_A });
-	KeyBind* const MOVE_RIGHT = makeKeyBind("move_right", { Keys::KEY_D });
-	KeyBind* const JUMP = makeKeyBind("jump", { Keys::KEY_SPACE });
-	KeyBind* const SNEAK = makeKeyBind("sneak", { Keys::KEY_SHIFT });
-	KeyBind* const PLACE_BLOCK = makeKeyBind("place_block", { MouseButtons::MOUSE_RIGHT });
-	KeyBind* const BREAK_BLOCK = makeKeyBind("break_block", { MouseButtons::MOUSE_LEFT });
-	// misc. keys
-	KeyBind* const TOGGLE_CURSOR = makeKeyBind("toggle_cursor", { Keys::KEY_E });
-	KeyBind* const EXIT = makeKeyBind("exit", { Keys::KEY_ESCAPE });
-	KeyBind* const MAXIMIZE_WINDOW = makeKeyBind("maximize", { Keys::KEY_F11 });
-	KeyBind* const TAKE_SCREENSHOT = makeKeyBind("take_screenshot", { Keys::KEY_F2 });
-	// debugging keys
-	KeyBind* const PRINT_CAMERA = makeKeyBind("print_camera", { Keys::KEY_ENTER });
-	KeyBind* const DEBUG_PLACE_FLUID = makeKeyBind("place_fluid", { Keys::KEY_F });
-	KeyBind* const DEBUG_BREAK_FLUID = makeKeyBind("break_fluid", { Keys::KEY_G });
+	namespace keybinds {
+		// movement keys
+		KeyBind* const MOVE_FORWARD = makeKeyBind("move_forward", { Keys::KEY_W });
+		KeyBind* const MOVE_BACKWARD = makeKeyBind("move_backward", { Keys::KEY_S });
+		KeyBind* const MOVE_LEFT = makeKeyBind("move_left", { Keys::KEY_A });
+		KeyBind* const MOVE_RIGHT = makeKeyBind("move_right", { Keys::KEY_D });
+		KeyBind* const JUMP = makeKeyBind("jump", { Keys::KEY_SPACE });
+		KeyBind* const SNEAK = makeKeyBind("sneak", { Keys::KEY_SHIFT });
+		KeyBind* const PLACE_BLOCK = makeKeyBind("place_block", { MouseButtons::MOUSE_RIGHT });
+		KeyBind* const BREAK_BLOCK = makeKeyBind("break_block", { MouseButtons::MOUSE_LEFT });
+		// misc. keys
+		KeyBind* const INVENTORY = makeKeyBind("inventory", { Keys::KEY_E });
+		KeyBind* const PAUSE = makeKeyBind("pause", { Keys::KEY_ESCAPE });
+		KeyBind* const MAXIMIZE_WINDOW = makeKeyBind("maximize", { Keys::KEY_F11 });
+		KeyBind* const TAKE_SCREENSHOT = makeKeyBind("take_screenshot", { Keys::KEY_F2 });
+		// debugging keys
+		KeyBind* const PRINT_CAMERA = makeKeyBind("print_camera", { Keys::KEY_ENTER });
+		KeyBind* const DEBUG_PLACE_FLUID = makeKeyBind("place_fluid", { Keys::KEY_F });
+		KeyBind* const DEBUG_BREAK_FLUID = makeKeyBind("break_fluid", { Keys::KEY_G });
+	}
 
 
 	KeyBind* makeKeyBind(std::string&& name, KeyInput&& defaultKeyInput) {
@@ -68,22 +70,22 @@ namespace eng::input {
 
 	void KeyBind::handleInput() {
 		prevPressed = pressed;
-		if (released) {
-			pressed = false;
-			released = false;
+		released = false;
+	}
+
+	void KeyBind::handlePress(const KeyInput& input, const bool callListners) {
+		pressed = true;
+		if (callListners) {
+			for (auto [ cbHandle, callback ] : pressHandlers) callback(input);
 		}
 	}
 
-	void KeyBind::handlePress(const KeyInput& input) {
-		pressed = true;
-		for (auto [ cbHandle, callback ] : pressHandlers) callback(input);
-	}
-
-	void KeyBind::handleRelease(const KeyInput& input) {
+	void KeyBind::handleRelease(const KeyInput& input, const bool callListners) {
 		released = true;
-		if (pressed) {
+		if (pressed && callListners) {
 			for (auto [cbHandle, callback] : releaseHandlers) callback(input);
 		}
+		pressed = false;
 	}
 
 	void KeyBind::resetState() noexcept {
@@ -125,7 +127,6 @@ namespace eng::input {
 	KeyBind* findKeyBind(const KeyInput& keyInput) {
 		auto keyBinds = getKeyBindList(keyInput.key);
 		if (!keyBinds) return nullptr;
-		
 		auto match = std::find_if(std::begin(*keyBinds), std::end(*keyBinds), [&](KeyBind* const keyBind) {
 			return (keyBind->keyInput && keyInput.modifiers[keyBind->keyInput->modifiers]);
 		});
@@ -133,7 +134,23 @@ namespace eng::input {
 		return *match;
 	}
 
-	void bind(KeyBind& keyBind, const KeyInput& keyInput) {
+	static KeyInput removeExtraModifiers(KeyInput keyInput) {
+		ModifierBits extraMods = ModifierBits::CAPS_LOCK | ModifierBits::NUM_LOCK;
+		if ((keyInput.key == Keys::KEY_LEFT_SHIFT) || (keyInput.key == Keys::KEY_RIGHT_SHIFT))
+			extraMods |= ModifierBits::SHIFT;
+		else if ((keyInput.key == Keys::KEY_LEFT_CONTROL) || (keyInput.key == Keys::KEY_RIGHT_CONTROL))
+			extraMods |= ModifierBits::CONTROL;
+		else if ((keyInput.key == Keys::KEY_LEFT_ALT) || (keyInput.key == Keys::KEY_RIGHT_ALT))
+			extraMods |= ModifierBits::ALT;
+		else if ((keyInput.key == Keys::KEY_LEFT_SUPER) || (keyInput.key == Keys::KEY_RIGHT_SUPER))
+			extraMods |= ModifierBits::SUPER;
+		keyInput.modifiers &= ~extraMods;
+		return keyInput;
+	}
+
+	void bind(KeyBind& keyBind, const KeyInput& keyInputIn) {
+		const KeyInput keyInput = removeExtraModifiers(keyInputIn);
+
 		// do nothing if keyBind is already bound to keyInput
 		if (keyBind.keyInput && (*(keyBind.keyInput) == keyInput)) return;
 
@@ -182,7 +199,7 @@ namespace eng::input {
 	bool isConflict(const KeyBind& a, const KeyBind& b) {
 		return a.keyInput && b.keyInput && (a.keyInput == b.keyInput);
 	}
-	
+
 	bool isShadow(const KeyBind& a, const KeyBind& b) {
 		if (!a.keyInput || !b.keyInput) return false;
 		if (a.keyInput->key != b.keyInput->key) return false;

@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <string>
+#include <array>
 #include <iostream>
 
 #include <glm/common.hpp>
@@ -77,6 +78,9 @@ namespace eng {
 			NEAREST = GL_NEAREST,
 			LINEAR = GL_LINEAR, // linear filtering only works for blit operations if the buffer mask only includes the color buffer
 		};
+		static constexpr auto ColorAttachments = std::to_array({
+			Attachment::COLOR_0, Attachment::COLOR_1, Attachment::COLOR_2, Attachment::COLOR_3, Attachment::COLOR_4, Attachment::COLOR_5, Attachment::COLOR_6, Attachment::COLOR_7, Attachment::COLOR_8, Attachment::COLOR_9, Attachment::COLOR_10, Attachment::COLOR_11, Attachment::COLOR_12, Attachment::COLOR_13, Attachment::COLOR_14, Attachment::COLOR_15, Attachment::COLOR_16, Attachment::COLOR_17, Attachment::COLOR_18, Attachment::COLOR_19, Attachment::COLOR_20, Attachment::COLOR_21, Attachment::COLOR_22, Attachment::COLOR_23, Attachment::COLOR_24, Attachment::COLOR_25, Attachment::COLOR_26, Attachment::COLOR_27, Attachment::COLOR_28, Attachment::COLOR_29, Attachment::COLOR_30, Attachment::COLOR_31,
+		});
 	private:
 		uint32_t id;
 		static uint32_t boundReadFBO, boundDrawFBO;
@@ -97,7 +101,7 @@ namespace eng {
 
 		void attachRenderBuffer(const Target target, const Attachment attachment, const RenderBuffer* const rbo) const;
 		void attachTexture(const Target target, const Attachment attachment, const Texture* const tex, const int32_t level = 0) const;
-		
+
 		void clearColorBuffer(const glm::vec4& value, size_t bufferIndex = 0) const;
 		void clearColorBuffer(const glm::ivec4& value, size_t bufferIndex = 0) const;
 		void clearColorBuffer(const glm::uvec4& value, size_t bufferIndex = 0) const;

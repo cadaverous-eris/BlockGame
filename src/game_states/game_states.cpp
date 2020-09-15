@@ -55,6 +55,20 @@ namespace eng {
 				gameState.windowFocusCallback(focused);
 		}, gameStateVariant);
 	}
+	void doGameStateOnGuiOpened(GameStateVariant& gameStateVariant) {
+		std::visit([](auto& gameState) {
+			using T = std::decay_t<decltype(gameState)>;
+			if constexpr (std::is_base_of_v<GameState, T> && requires (T gs) { gs.onGuiOpened(); })
+				gameState.onGuiOpened();
+		}, gameStateVariant);
+	}
+	void doGameStateOnGuiClosed(GameStateVariant& gameStateVariant)  {
+		std::visit([](auto& gameState) {
+			using T = std::decay_t<decltype(gameState)>;
+			if constexpr (std::is_base_of_v<GameState, T> && requires (T gs) { gs.onGuiClosed(); })
+				gameState.onGuiClosed();
+		}, gameStateVariant);
+	}
 
 
 	void setGameStateFromInitializer(GameStateVariant& gameState, GameStateInitializerVariant& initializerVariant) {

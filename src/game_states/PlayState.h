@@ -25,9 +25,9 @@ namespace eng {
 		Camera camera;
 
 		WorldRenderer worldRenderer;
-		
+
 		HudRenderer hudRenderer;
-		
+
 		RayCastResult<float> playerRayCastResult;
 		int blockPlaceDelay = 0;
 		int blockBreakDelay = 0;
@@ -39,7 +39,8 @@ namespace eng {
 		const float cameraSpeed = 0.2f;
 		const float cameraSensitivity = 0.5f;
 
-		input::KeyBind::PressHandler toggleCursorKeyHandler;
+		input::KeyBind::PressHandler pauseKeyHandler;
+		input::KeyBind::PressHandler inventoryKeyHandler;
 		input::KeyBind::PressHandler printCameraKeyHandler;
 		input::KeyBind::PressHandler takeScreenshotKeyHandler;
 
@@ -60,7 +61,11 @@ namespace eng {
 
 		void rendererResize(size_t width, size_t height);
 
-		void toggleCursor() const;
+		void onGuiOpened();
+		void onGuiClosed();
+
+		void openInventory() const;
+		void openPauseMenu() const;
 
 		const RayCastResultF& getPlayerRayCastResult() const noexcept { return playerRayCastResult; }
 

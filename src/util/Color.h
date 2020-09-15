@@ -286,8 +286,8 @@ namespace eng {
 				const float hue = pmod(h, 360.0f);
 				const float sat = glm::clamp(s, 0.0f, 1.0f);
 				const float val = glm::clamp(v, 0.0f, 1.0f);
-				const auto f = [hue, sat, val](int n) -> float {
-					const float k = fmod(n + (hue / 60), 6.0f);
+				const auto f = [hue, sat, val](float n) -> float {
+					const float k = fmod(n + (hue / 60.0f), 6.0f);
 					return val - (val * sat * vmax(vmin(k, 4 - k, 1.0f), 0.0f));
 				};
 				return { f(5), f(3), f(1), a };
@@ -731,7 +731,14 @@ namespace eng {
 		constexpr Color rebeccapurple = 0x663399_c;
 
 
-		inline const std::map<std::string, Color> color_values {
+		struct ColorValuesMapKeyCompare {
+			using is_transparent = void;
+			inline bool operator ()(const std::string& lhs, const std::string& rhs) const noexcept { return lhs < rhs; }
+			inline bool operator ()(const std::string_view lhs, const std::string& rhs) const noexcept { return lhs < rhs; }
+			inline bool operator ()(const std::string& lhs, const std::string_view rhs) const noexcept { return lhs < rhs; }
+			constexpr bool operator ()(const std::string_view lhs, const std::string_view rhs) const noexcept { return lhs < rhs; }
+		};
+		inline const std::map<std::string, Color, ColorValuesMapKeyCompare> color_values {
 			{ std::string("transparent"), transparent },
 			{ std::string("black"), black },
 			{ std::string("silver"), silver },
@@ -903,7 +910,15 @@ namespace eng {
 			const colorDefinitionLines = colorDefs.map(c => `constexpr Color ${c.name} = 0x${c.hex}_c;`).join('\n');
 			const colorNameMapLines = colorDefs.map(c => ('\t' + `{ std::string("${c.name}"), ${c.name} },`)).join('\n');
 
-			console.log(colorDefinitionLines + '\n\n\ninline const std::map<std::string, Color> color_values {\n' + colorNameMapLines + '\n};\n');
+			const colorNameMapKeyCompareDef = "struct ColorValuesMapKeyCompare {\n" +
+											  "\tusing is_transparent = void;\n" +
+											  "\tinline bool operator ()(const std::string& lhs, const std::string& rhs) const noexcept { return lhs < rhs; }\n" +
+											  "\tinline bool operator ()(const std::string_view lhs, const std::string& rhs) const noexcept { return lhs < rhs; }\n" +
+											  "\tinline bool operator ()(const std::string& lhs, const std::string_view rhs) const noexcept { return lhs < rhs; }\n" +
+											  "\tconstexpr bool operator ()(const std::string_view lhs, const std::string_view rhs) const noexcept { return lhs < rhs; }\n" +
+											  "};"
+
+			console.log(colorDefinitionLines + '\n\n\n' + colorNameMapKeyCompareDef + '\ninline const std::map<std::string, Color, ColorValuesMapKeyCompare> color_values {\n' + colorNameMapLines + '\n};\n');
 		})(`
 		`); // copy and past contents of table from https://developer.mozilla.org/en-US/docs/Web/CSS/color_value into string literal
 		*/

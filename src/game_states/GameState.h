@@ -31,6 +31,9 @@ namespace eng {
 		//void windowMinimizeCallback(bool minimized) {}
 		//void windowFocusCallback(bool focused) {}
 
+		//void onGuiOpened();
+		//void onGuiClosed();
+
 		Game* getGame() { return game; }
 		const Game* getGame() const { return game; }
 	};

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 #include <glm/vec2.hpp>
 
 #include "render/Window.h"
@@ -49,6 +51,7 @@ namespace eng::input {
 
 		const glm::dvec2& getCursorPos() const noexcept { return cursorPos; }
 		const glm::dvec2& getPrevCursorPos() const noexcept { return prevCursorPos; }
+		void setCursorPos(const glm::dvec2& pos) noexcept;
 
 		const glm::dvec2& getMouseScroll() const noexcept { return mouseScrollOffset; }
 
@@ -56,6 +59,16 @@ namespace eng::input {
 		void setCursorMode(CursorMode cursorMode) const noexcept { glfwSetInputMode(window->handle, GLFW_CURSOR, static_cast<int>(cursorMode)); }
 
 		bool cursorModeChanged() const noexcept { return prevCursorMode != getCursorMode(); }
+
+		inline bool isMouseButtonPressed(MouseButtons btn) const noexcept { return glfwGetMouseButton(window->handle, static_cast<int>(btn)) == GLFW_PRESS; }
+		inline bool isKeyPressed(Keys key) const noexcept { return glfwGetKey(window->handle, static_cast<int>(key)) == GLFW_PRESS; }
+
+		inline std::string_view getClipboardString() const noexcept {
+			const char* str = glfwGetClipboardString(window->handle);
+			if (!str) return {};
+			else return str;
+		}
+		inline void setClipboardString(const std::string& str) const noexcept { glfwSetClipboardString(window->handle, str.data()); }
 
 	};
 

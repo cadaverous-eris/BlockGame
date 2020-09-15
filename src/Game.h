@@ -22,6 +22,8 @@ namespace eng {
 
 	class Game;
 
+	class Gui;
+
 	class Game {
 		friend int ::main();
 	private:
@@ -38,14 +40,17 @@ namespace eng {
 		// target render interval in nanoseconds
 		static inline constexpr std::chrono::nanoseconds renderIntervalNanos = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::duration<long long, std::ratio<1, Game::FRAMERATE>>(1));
 
-		Settings settings;
+		Settings settings; // TODO: make private and add getters (and setters?)
 		Window window; // the game's main window
 		Renderer renderer;
 		input::InputManager inputManager;
 
-
 	private:
 		bool shouldClose = false; // exit condition for game loop
+
+		std::unique_ptr<Gui> nextGui;
+		std::unique_ptr<Gui> activeGui;
+		bool shouldCloseGui = false;
 
 		int fps = 0; // approximate framerate updated once per tick batch
 		int avgFPS = 0; // average framerate over the past second
@@ -57,11 +62,8 @@ namespace eng {
 		clock::time_point prevLoopTime = clock::now();
 		// time point of the end of the first tick in the previous batch of ticks
 		clock::time_point prevFPTTickTime = clock::now();
-		
-		input::KeyBind::PressHandler handleExitPressed { *input::EXIT, [this](const input::KeyInput&) {
-			this->quit();
-		} };
-		input::KeyBind::PressHandler handleMaximizePressed { *input::MAXIMIZE_WINDOW, [this](const input::KeyInput&) {
+
+		input::KeyBind::PressHandler handleMaximizePressed { *input::keybinds::MAXIMIZE_WINDOW, [this](const input::KeyInput&) {
 			if (this->window.isMaximized()) this->window.restore();
 			else this->window.maximize();
 		} };
@@ -92,6 +94,12 @@ namespace eng {
 		// End the game loop, causing the program to shutdown
 		void quit();
 
+		bool isPaused() const noexcept;
+
+		Gui* getActiveGui() const noexcept;
+		void openGui(std::unique_ptr<Gui>&&) noexcept;
+		void closeGui() noexcept;
+
 		// called when the window size changes so that the current GameState can react to the change
 		void rendererResize(size_t width, size_t height);
 		// called when the window scale changes so that the current GameState can react to the change
@@ -104,6 +112,9 @@ namespace eng {
 		inline int getFPS() const noexcept { return fps; }
 		inline int getAvgFPS() const noexcept { return avgFPS; }
 		inline const std::string& getName() noexcept { return name; }
+
+		void applySettingsChanges();
+		void saveSettingsFile();
 
 		~Game();
 

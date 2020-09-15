@@ -61,6 +61,8 @@ namespace eng {
 	void doGameStateWindowMaximizeCallback(GameStateVariant&, bool maximized);
 	void doGameStateWindowMinimizeCallback(GameStateVariant&, bool minimized);
 	void doGameStateWindowFocusCallback(GameStateVariant&, bool focused);
+	void doGameStateOnGuiOpened(GameStateVariant&);
+	void doGameStateOnGuiClosed(GameStateVariant&);
 
 
 	void setGameStateFromInitializer(GameStateVariant&, GameStateInitializerVariant&);

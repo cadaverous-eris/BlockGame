@@ -5,6 +5,7 @@
 #include <chrono>
 #include <sstream>
 #include <stdexcept>
+#include <utility>
 #include <vector>
 
 #include "game_states/PlayState.h"
@@ -16,6 +17,7 @@
 #include "render/world/chunk/ChunkBakery.h"
 #include "util/resources/ResourceManager.h"
 #include "util/math/RNG.h"
+#include "gui/Gui.h"
 
 namespace eng {
 
@@ -39,7 +41,7 @@ namespace eng {
 	};
 
 	Game::Game() :
-			settings(loadSettingsFile()),
+			settings(Settings::loadSettingsFile()),
 			window(this, settings.windowSize.x, settings.windowSize.y, ""),
 			renderer(&window),
 			inputManager(&window),
@@ -56,11 +58,10 @@ namespace eng {
 		// initialize the renderer
 		renderer.init();
 
+		settings.applyChanges(*this);
+
 		ResourceManager::initInstance(*this);
 		ResourceManager::instance().loadResources();
-
-		// set the chunk loading/unloading distance from the settings file
-		World::setChunkLoadRadius(settings.chunkLoadRadius);
 
 	}
 
@@ -81,7 +82,7 @@ namespace eng {
 		prevLoopTime = clock::now();
 
 		nanoseconds lag(0ns);
-		
+
 		nanoseconds timer(0ns);
 		int fpsAccumulator = 0;
 		int tpsAccumulator = 0;
@@ -109,7 +110,29 @@ namespace eng {
 
 			// handle GameState changes
 			if (hasGameStateInitializer(nextGameStateInitializer)) {
+				nextGui.reset();
+				activeGui.reset(); // close the opened GUI (if one is open) before changing the gamestate
+				input::resetKeyBindStates();
 				setGameStateFromInitializer(currentGameState, nextGameStateInitializer);
+			}
+
+			if (shouldCloseGui) {
+				shouldCloseGui = false;
+				const bool hadActiveGui = static_cast<bool>(activeGui);
+				nextGui.reset();
+				activeGui.reset();
+				if (hadActiveGui) {
+					doGameStateOnGuiClosed(currentGameState);
+					input::resetKeyBindStates();
+				}
+			} else if (nextGui) {
+				const bool hadActiveGui = static_cast<bool>(activeGui);
+				activeGui = std::move(nextGui);
+				if (activeGui)
+					doGameStateOnGuiOpened(currentGameState);
+				else if (hadActiveGui)
+					doGameStateOnGuiClosed(currentGameState);
+				input::resetKeyBindStates();
 			}
 
 			// Handle input
@@ -121,7 +144,7 @@ namespace eng {
 				update();
 				tpsAccumulator++;
 				lag -= tickIntervalNanos;
-				
+
 				if (!didTick) {
 					const auto currentTickTime = clock::now();
 					if (fptAccumulator > 0) {
@@ -133,6 +156,10 @@ namespace eng {
 					prevFPTTickTime = currentTickTime;
 				}
 				didTick = true;
+
+				// TODO: remove?
+				if (hasGameStateInitializer(nextGameStateInitializer) || shouldCloseGui || nextGui)
+					break;
 			}
 
 			// Calculate partial ticks for render
@@ -149,20 +176,33 @@ namespace eng {
 	void Game::input() {
 		inputManager.input(); // Poll for and process input events
 
-		doGameStateInput(currentGameState);
+		const bool hasOpenGui = static_cast<bool>(activeGui);
+		if (activeGui)
+			activeGui->handleInput();
+		else
+			doGameStateInput(currentGameState);
+		//if (!hasOpenGui || !activeGui->shouldPauseGame())
+		//	doGameStateInput(currentGameState);
 	}
 
 	void Game::update() {
 		doGameStateUpdate(currentGameState);
 
+		if (activeGui)
+			activeGui->update();
 
 		inputManager.update();
 	}
 
 	void Game::render(float partialTicks) {
-		// TODO: implement
-
-		doGameStateRender(currentGameState, partialTicks);
+		const bool hasOpenGui = static_cast<bool>(activeGui);
+		if (!hasOpenGui || activeGui->isTransparent())
+			doGameStateRender(currentGameState, partialTicks);
+		if (hasOpenGui) {
+			if (activeGui->isTransparent())
+				renderer.clear(Renderer::ClearBit::DEPTH | Renderer::ClearBit::STENCIL);
+			activeGui->render(partialTicks);
+		}
 
 		renderer.getUIRenderer()->render(partialTicks);
 		renderer.getFontRenderer()->render(partialTicks);
@@ -192,6 +232,28 @@ namespace eng {
 
 	void Game::quit() {
 		shouldClose = true;
+	}
+
+	bool Game::isPaused() const noexcept {
+		return (activeGui && activeGui->shouldPauseGame());
+	}
+
+	Gui* Game::getActiveGui() const noexcept { return activeGui.get(); }
+	void Game::openGui(std::unique_ptr<Gui>&& gui) noexcept {
+		nextGui = std::move(gui);
+		shouldCloseGui = !static_cast<bool>(nextGui); // TODO: don't set to false?
+	}
+	void Game::closeGui() noexcept {
+		nextGui.reset();
+		shouldCloseGui = true;
+	}
+
+	void Game::applySettingsChanges() {
+		settings.applyChanges(*this);
+		saveSettingsFile();
+	}
+	void Game::saveSettingsFile() {
+		Settings::saveSettingsFile(settings);
 	}
 
 	void Game::rendererResize(size_t width, size_t height) {

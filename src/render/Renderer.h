@@ -125,6 +125,7 @@ namespace eng {
 
 		Window* const window;
 	private:
+		int uiScale = 2;
 		float fov = 60.0f;
 
 		glm::mat4 projectionMatrix = glm::mat4(1.0);
@@ -133,6 +134,7 @@ namespace eng {
 		glm::ivec2 windowSize;
 		glm::vec2 windowContentScale;
 		glm::ivec2 windowSizeScaled;
+		glm::vec2 uiSize;
 
 		std::unique_ptr<UIRenderer> uiRenderer;
 		std::unique_ptr<FontRenderer> fontRenderer;
@@ -155,12 +157,12 @@ namespace eng {
 
 		static inline void clear(ClearBit clearBits) noexcept { glClear(to_underlying(clearBits)); }
 
-		static inline void clearColor(const Color& color) noexcept { glClearColor(color.r / 255.0f, color.g / 255.0f, color.b / 255.0f, color.a / 255.0f); }
+		static inline void setClearColor(const Color& color) noexcept { glClearColor(color.r / 255.0f, color.g / 255.0f, color.b / 255.0f, color.a / 255.0f); }
 
-		static inline void clearDepth(const double depth) noexcept { glClearDepth(depth); }
-		static inline void clearDepth(const float depth) noexcept { glClearDepth(static_cast<double>(depth)); }
+		static inline void setClearDepth(const double depth) noexcept { glClearDepth(depth); }
+		static inline void setClearDepth(const float depth) noexcept { glClearDepth(static_cast<double>(depth)); }
 
-		static inline void clearStencil(const int32_t stencil) noexcept { glClearStencil(stencil); }
+		static inline void setClearStencil(const int32_t stencil) noexcept { glClearStencil(stencil); }
 
 		static inline void setActiveDrawBuffer(const DrawBuffer buffer) noexcept { glDrawBuffer(to_underlying(buffer)); }
 		static void setActiveDrawBuffers(const std::initializer_list<DrawBuffer> buffers) noexcept;
@@ -181,11 +183,18 @@ namespace eng {
 			this->fov = fov;
 			updateProjectionMatrices();
 		}
+		inline int getUIScale() const noexcept { return uiScale; }
+		void setUIScale(int uiScale) {
+			this->uiScale = uiScale;
+			handleWindowResize();
+		}
 
 		inline const glm::ivec2& getWindowSize() const noexcept { return windowSize; }
 		inline const glm::vec2& getWindowContentScale() const noexcept { return windowContentScale; }
 		inline const glm::ivec2& getWindowSizeScaled() const noexcept { return windowSizeScaled; }
+		inline const glm::vec2& getUISize() const noexcept { return uiSize; }
 
+		void handleWindowResize();
 		void handleWindowResize(int windowWidth, int windowHeight);
 		void handleWindowRescale(float scaleX, float scaleY);
 		void handleWindowResize(int windowWidth, int windowHeight, float scaleX, float scaleY);
@@ -195,6 +204,8 @@ namespace eng {
 
 		inline FontRenderer* getFontRenderer() noexcept { return fontRenderer.get(); }
 		inline const FontRenderer* getFontRenderer() const noexcept { return fontRenderer.get(); }
+
+		void takeScreenshot() const;
 
 		template<GLExtension Ext>
 		static inline bool hasExtension() noexcept {

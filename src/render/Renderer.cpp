@@ -3,9 +3,13 @@
 #include <stdexcept>
 #include <string>
 #include <iostream>
+#include <chrono>
+#include <filesystem>
 
+#include "Game.h"
 #include "render/ui/UIRenderer.h"
 #include "render/font/FontRenderer.h"
+#include "gui/Gui.h"
 
 namespace eng {
 
@@ -28,6 +32,7 @@ namespace eng {
 			windowSize(window->getSize()),
 			windowContentScale(window->getContentScale()),
 			windowSizeScaled(static_cast<glm::vec2>(window->getSize()) / window->getContentScale()),
+			uiSize(glm::floor(static_cast<glm::vec2>(windowSize) / static_cast<float>(this->uiScale))),
 			uiRenderer(),
 			fontRenderer() {
 		updateProjectionMatrices();
@@ -83,7 +88,8 @@ namespace eng {
 		const float ratio = (windowSize.x != windowSize.y) ?
 			(static_cast<float>(windowSize.x) / static_cast<float>(windowSize.y)) : 1.0f;
 		projectionMatrix = glm::perspective(glm::radians(fov), ratio, perspectiveNearPlane, perspectiveFarPlane);
-		orthoMatrix = glm::ortho(0.0f, static_cast<float>(windowSizeScaled.x), static_cast<float>(windowSizeScaled.y), 0.0f);
+		//orthoMatrix = glm::ortho(0.0f, static_cast<float>(windowSizeScaled.x), static_cast<float>(windowSizeScaled.y), 0.0f, 100.0f, -100.0f);
+		orthoMatrix = glm::ortho(0.0f, static_cast<float>(uiSize.x), static_cast<float>(uiSize.y), 0.0f, 100.0f, -100.0f);
 	}
 
 	void Renderer::setActiveTextureUnit(unsigned char textureUnit) {
@@ -150,23 +156,26 @@ namespace eng {
 	}
 
 
-	void Renderer::handleWindowResize(int windowWidth, int windowHeight) {
-		setViewport(windowWidth, windowHeight);
-		windowSize = { windowWidth, windowHeight };
+	void Renderer::handleWindowResize() {
+		setViewport(windowSize.x, windowSize.y);
 		windowSizeScaled = static_cast<glm::vec2>(windowSize) / windowContentScale;
+		uiSize = glm::floor(static_cast<glm::vec2>(windowSize) / static_cast<float>(this->uiScale));
 		updateProjectionMatrices();
+		if (window->game->getActiveGui())
+			window->game->getActiveGui()->handleResize();
+	}
+	void Renderer::handleWindowResize(int windowWidth, int windowHeight) {
+		windowSize = { windowWidth, windowHeight };
+		handleWindowResize();
 	}
 	void Renderer::handleWindowRescale(float scaleX, float scaleY) {
 		windowContentScale = { scaleX, scaleY };
-		windowSizeScaled = static_cast<glm::vec2>(windowSize) / windowContentScale;
-		updateProjectionMatrices();
+		handleWindowResize();
 	}
 	void Renderer::handleWindowResize(int windowWidth, int windowHeight, float scaleX, float scaleY) {
-		setViewport(windowWidth, windowHeight);
 		windowSize = { windowWidth, windowHeight };
 		windowContentScale = { scaleX, scaleY };
-		windowSizeScaled = static_cast<glm::vec2>(windowSize) / windowContentScale;
-		updateProjectionMatrices();
+		handleWindowResize();
 	}
 
 
@@ -193,6 +202,44 @@ namespace eng {
 		default:
 			return os << "unknown_extension";
 		}
+	}
+
+	void Renderer::takeScreenshot() const {
+		auto frameData = std::make_unique<unsigned char[]>(static_cast<size_t>(windowSize.x * windowSize.y * 4));
+		FrameBuffer::unbind(FrameBufferTarget::READ_FRAMEBUFFER);
+		Renderer::setActiveReadBuffer(Renderer::isDoubleBuffered() ? DrawBuffer::BACK : DrawBuffer::FRONT);
+		glPixelStorei(GL_PACK_ALIGNMENT, 1);
+		glReadPixels(0, 0, windowSize.x, windowSize.y, GL_RGBA, GL_UNSIGNED_BYTE, frameData.get());
+		ImageRGBA frameImage(frameData.get(), windowSize.x, windowSize.y);
+
+		namespace fs = std::filesystem;
+		fs::path screenshotFolderPath = fs::absolute("screenshots");
+		if (fs::exists(screenshotFolderPath)) {
+			if (fs::is_symlink(screenshotFolderPath)) {
+				fs::path linkPath = fs::read_symlink(screenshotFolderPath);
+				if (fs::is_directory(linkPath)) {
+					screenshotFolderPath = fs::read_symlink(screenshotFolderPath);
+				} else {
+					fs::remove_all(screenshotFolderPath);
+					fs::create_directory(screenshotFolderPath);
+				}
+			}
+			if (!fs::is_directory(screenshotFolderPath)) {
+				fs::remove_all(screenshotFolderPath);
+				fs::create_directory(screenshotFolderPath);
+			}
+		} else {
+			fs::create_directory(screenshotFolderPath);
+		}
+
+		using namespace std::chrono;
+		const auto currentTimeMillis = duration_cast<milliseconds>(steady_clock::now().time_since_epoch()).count();
+		std::ostringstream imgPathStream {};
+		imgPathStream << "screenshot_" << currentTimeMillis << ".png"; // TODO: use better naming system
+		screenshotFolderPath /= imgPathStream.str();
+
+		// write the screenshot to a file
+		frameImage.flipY().writeImage(screenshotFolderPath.string());
 	}
 
 }

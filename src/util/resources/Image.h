@@ -28,7 +28,7 @@ namespace eng {
 		template<typename D> struct image_pixel_type<2, D, std::enable_if_t<std::is_arithmetic_v<D>>> { using type = glm::vec<2, D>; };
 		template<typename D> struct image_pixel_type<1, D, std::enable_if_t<std::is_arithmetic_v<D>>> { using type = D; };
 		template<size_t channels, typename D> using image_pixel_type_t = typename image_pixel_type<channels, D>::type;
-		
+
 		template<typename PixelT, typename = void> struct pixel_type_channels : std::integral_constant<size_t, 0> {};
 		template<typename D> struct pixel_type_channels<glm::vec<4, D>, std::enable_if_t<std::is_arithmetic_v<D>>> : std::integral_constant<size_t, 4> {};
 		template<typename D> struct pixel_type_channels<glm::vec<3, D>, std::enable_if_t<std::is_arithmetic_v<D>>> : std::integral_constant<size_t, 3> {};
@@ -99,14 +99,25 @@ namespace eng {
 				this->data = std::make_unique<data_type[]>(width * height * channels);
 			//assert(this->data.get() != nullptr);
 		}
+		// transfers ownership of texture data from existing unique_ptr
+		Image(data_ptr data, int width, int height) :
+				data(std::move(data)), width(static_cast<size_t>(std::max(width, 0))), height(static_cast<size_t>(std::max(height, 0))) {
+			if (!this->data && ((width * height) > 0))
+				this->data = std::make_unique<data_type[]>(width * height * channels);
+			//assert(this->data.get() != nullptr);
+		}
 		// copies texture data from raw pointer
 		Image(const data_type* data, size_t width, size_t height) :
 				Image(makeDataPtr(width, height), width, height) {
 			if (data && this->data) std::memcpy(this->data.get(), data, getSize() * sizeof(data_type));
 			//else std::fill(this->data.get(), this->data.get() + getSize(), data_type(0));
 		}
+		// copies texture data from raw pointer
+		Image(const data_type* data, int width, int height) :
+				Image(data, static_cast<size_t>(std::max(width, 0)), static_cast<size_t>(std::max(height, 0))) {}
 		Image(size_t width, size_t height) : Image(nullptr, width, height) {}
-
+		Image(int width, int height) :
+				Image(nullptr, static_cast<size_t>(std::max(width, 0)), static_cast<size_t>(std::max(height, 0))) {}
 		Image(const Image& b) : Image(b.data.get(), b.width, b.height) {}
 		Image(Image&& b) : Image(std::move(b.data), b.width, b.height) {}
 		Image& operator =(const Image& b) {

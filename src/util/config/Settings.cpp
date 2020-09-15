@@ -14,11 +14,12 @@ namespace eng {
 
 	void Settings::applyChanges(Game& game) {
 		World::setChunkLoadRadius(chunkLoadRadius);
-		
+		game.renderer.setUIScale(uiScale);
 
+		saveSettingsFile(*this);
 	}
 
-	Settings loadSettingsFile() {
+	Settings Settings::loadSettingsFile() {
 		using namespace jonk;
 		std::string fileText;
 		Settings settings {};
@@ -39,12 +40,17 @@ namespace eng {
 		}
 		if (settingsJonk.isObject()) {
 			JonkObject& settingsObj = settingsJonk.asObject();
-			if (settingsObj.hasKey<uint16_t>("chunk_load_radius")) {
-				settings.chunkLoadRadius = settingsObj.get<uint16_t>("chunk_load_radius");
+			if (settingsObj.hasKey<int16_t>("chunk_load_radius")) {
+				settings.chunkLoadRadius = settingsObj.get<int16_t>("chunk_load_radius");
 				settings.chunkLoadRadius = std::clamp(settings.chunkLoadRadius, Settings::min_chunk_load_radius, Settings::max_chunk_load_radius);
+			}
+			if (settingsObj.hasKey<int32_t>("ui_scale")) {
+				settings.uiScale = std::clamp(settingsObj.get<int32_t>("ui_scale"), Settings::min_ui_scale, Settings::max_ui_scale);
 			}
 			if (settingsObj.hasKey<glm::i16vec2>("window_size")) {
 				settings.windowSize = settingsObj.get<glm::i16vec2>("window_size");
+				if (settings.windowSize.x < min_window_size.x) settings.windowSize.x = min_window_size.x;
+				if (settings.windowSize.y < min_window_size.y) settings.windowSize.y = min_window_size.y;
 			}
 			if (settingsObj.hasKey<Object>("keybinds")) {
 				using namespace eng::input;
@@ -59,7 +65,6 @@ namespace eng {
 					}
 				}
 			}
-			
 		} else {
 			std::cerr << "Invalid settings file\n";
 		}
@@ -67,7 +72,7 @@ namespace eng {
 		return settings;
 	}
 
-	void saveSettingsFile(const Settings& settings) {
+	void Settings::saveSettingsFile(const Settings& settings) {
 		try {
 			writeTextFile(Settings::file_path, jonk::Jonk(settings).toJonkString());
 		} catch (const std::runtime_error& e) {

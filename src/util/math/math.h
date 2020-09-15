@@ -1,7 +1,6 @@
 #pragma once
 
 #include <utility>
-#include <type_traits>
 #include <limits>
 #include <cmath>
 #include <cstring>
@@ -17,6 +16,8 @@
 #include <glm/vector_relational.hpp>
 #include <glm/ext/vector_relational.hpp>
 #include <glm/ext/scalar_relational.hpp>
+
+#include "util/type_traits.h"
 
 namespace eng {
 
@@ -97,6 +98,33 @@ namespace eng {
 		return l;
 	}
 
+	template<glm::length_t L, typename T, glm::qualifier Q>
+	requires ((L > 0) && (L <= 4)) && requires(const T& t0, const T& t1) { { t0 < t1 } -> std::convertible_to<bool>; }
+	constexpr glm::vec<L, T, Q> vec_min(const glm::vec<L, T, Q>& v0, const glm::vec<L, T, Q>& v1)
+	noexcept(requires(const T& t0, const T& t1) { { t0 < t1 } noexcept -> std::convertible_to<bool>; }) {
+		if constexpr (L == 4)
+			return glm::vec<L, T, Q>((v0.x < v1.x) ? v0.x : v1.x, (v0.y < v1.y) ? v0.y : v1.y, (v0.z < v1.z) ? v0.z : v1.z, (v0.w < v1.w) ? v0.w : v1.w);
+		else if constexpr (L == 3)
+			return glm::vec<L, T, Q>((v0.x < v1.x) ? v0.x : v1.x, (v0.y < v1.y) ? v0.y : v1.y, (v0.z < v1.z) ? v0.z : v1.z);
+		else if constexpr (L == 2)
+			return glm::vec<L, T, Q>((v0.x < v1.x) ? v0.x : v1.x, (v0.y < v1.y) ? v0.y : v1.y);
+		else
+			return glm::vec<L, T, Q>((v0.x < v1.x) ? v0.x : v1.x);
+	}
+	template<glm::length_t L, typename T, glm::qualifier Q, std::enable_if_t<((L > 0) && (L <= 4))>>
+	requires ((L > 0) && (L <= 4)) && requires(const T& t0, const T& t1) { { t0 < t1 } -> std::convertible_to<bool>; }
+	constexpr glm::vec<L, T, Q> vec_max(const glm::vec<L, T, Q>& v0, const glm::vec<L, T, Q>& v1)
+	noexcept(requires(const T& t0, const T& t1) { { t0 < t1 } noexcept -> std::convertible_to<bool>; }) {
+		if constexpr (L == 4)
+			return glm::vec<L, T, Q>((v0.x < v1.x) ? v1.x : v0.x, (v0.y < v1.y) ? v1.y : v0.y, (v0.z < v1.z) ? v1.z : v0.z, (v0.w < v1.w) ? v1.w : v0.w);
+		else if constexpr (L == 3)
+			return glm::vec<L, T, Q>((v0.x < v1.x) ? v1.x : v0.x, (v0.y < v1.y) ? v1.y : v0.y, (v0.z < v1.z) ? v1.z : v0.z);
+		else if constexpr (L == 2)
+			return glm::vec<L, T, Q>((v0.x < v1.x) ? v1.x : v0.x, (v0.y < v1.y) ? v1.y : v0.y);
+		else
+			return glm::vec<L, T, Q>((v0.x < v1.x) ? v1.x : v0.x);
+	}
+
 	// helper type trait for variadic min() to determine if glm::min can be called with arguments of the provided types
 	template<typename, typename, typename = std::void_t<>>
 	struct is_glm_min_invocable : std::false_type {};
@@ -119,12 +147,12 @@ namespace eng {
 
 	// variadic min()
 	template<typename T>
-	T vmin(T&& t) noexcept { return std::forward<T>(t); }
+	constexpr T vmin(T&& t) noexcept { return std::forward<T>(t); }
 	// variadic min()
 	template<typename T0, typename T1, typename... Ts>
 	constexpr std::common_type_t<T0, T1, Ts...> vmin(T0&& val1, T1&& val2, Ts&&... vs) {
 		if constexpr (is_glm_min_invocable_v<T0, T1>) {
-			return vmin(glm::min(val1, val2), std::forward<Ts>(vs)...);
+			return vmin(glm::min(val1, val2), std::forward<Ts>(vs)...); // TODO: use constexr version of glm::min
 		} else {
 			return (val1 < val2) ? vmin(val1, std::forward<Ts>(vs)...) : vmin(val2, std::forward<Ts>(vs)...);
 		}
@@ -132,14 +160,14 @@ namespace eng {
 
 	// variadic max()
 	template<typename T>
-	T vmax(T&& t) noexcept { return std::forward<T>(t); }
+	constexpr T vmax(T&& t) noexcept { return std::forward<T>(t); }
 	// variadic max()
 	template<typename T0, typename T1, typename... Ts>
 	constexpr std::common_type_t<T0, T1, Ts...> vmax(T0&& val1, T1&& val2, Ts&&... vs) {
 		if constexpr (is_glm_max_invocable_v<T0, T1>) {
-			return vmax(glm::max(val1, val2), std::forward<Ts>(vs)...);
+			return vmax(glm::max(val1, val2), std::forward<Ts>(vs)...); // TODO: use constexr version of glm::max
 		} else {
-			return (val1 > val2) ? vmax(val1, std::forward<Ts>(vs)...) : vmax(val2, std::forward<Ts>(vs)...);
+			return (val1 < val2) ? vmax(val2, std::forward<Ts>(vs)...) : vmax(val1, std::forward<Ts>(vs)...);
 		}
 	}
 

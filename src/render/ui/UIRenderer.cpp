@@ -23,70 +23,77 @@ namespace eng {
 		texturedVAO.setVertexFormat(UIVertTex::format);
 	}
 
-	void UIRenderer::flushColored(const glm::mat4& matrix, const TriMode mode) {
+	static inline void preRenderColored(const bool writeDepth) {
+		glEnable(GL_CULL_FACE);
+		if (!writeDepth) glDepthMask(GL_FALSE);
+		glEnable(GL_DEPTH_TEST);
+		glEnable(GL_BLEND);
+		//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+	}
+	static inline void postRenderColored() {
+		glDisable(GL_BLEND);
+		glDepthMask(GL_TRUE);
+	}
+	static inline void preRenderLines(const bool writeDepth) {
+		glEnable(GL_CULL_FACE);
+		if (!writeDepth) glDepthMask(GL_FALSE);
+		glEnable(GL_DEPTH_TEST);
+		glEnable(GL_BLEND);
+		//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+	}
+	static inline void postRenderLines() {
+		glDisable(GL_BLEND);
+		glDepthMask(GL_TRUE);
+	}
+	static inline void preRenderTextured(const bool writeDepth) {
+		glEnable(GL_CULL_FACE);
+		if (!writeDepth) glDepthMask(GL_FALSE);
+		glEnable(GL_DEPTH_TEST);
+		glEnable(GL_BLEND);
+		//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+	}
+	static inline void postRenderTextured() {
+		glDisable(GL_BLEND);
+		glDepthMask(GL_TRUE);
+	}
+
+	void UIRenderer::flushColored(const glm::mat4& matrix, const TriMode mode, bool writeDepth) {
 		if (!coloredTriBuffer.empty()) {
 			colorShader.bind();
 			colorShader.setUniform("matrix", matrix);
-
-			glEnable(GL_CULL_FACE);
-			glDepthMask(GL_FALSE);
-			glEnable(GL_DEPTH_TEST);
-			glEnable(GL_BLEND);
-			//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-			glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-
+			preRenderColored(writeDepth);
 			coloredVAO.bind();
 			coloredVBO.setData(std::span(coloredTriBuffer.data(), coloredTriBuffer.size()));
 			coloredVAO.draw(toDrawMode(mode), 0, coloredTriBuffer.size());
-
-			glDisable(GL_BLEND);
-			glDepthMask(GL_TRUE);
-
+			postRenderColored();
 			coloredTriBuffer.clear();
 		}
 	}
-	void UIRenderer::flushLines(const glm::mat4& matrix, const LineMode mode) {
+	void UIRenderer::flushLines(const glm::mat4& matrix, const LineMode mode, bool writeDepth) {
 		if (!lineBuffer.empty()) {
 			colorShader.bind();
 			colorShader.setUniform("matrix", matrix);
-
-			glEnable(GL_CULL_FACE);
-			glDepthMask(GL_FALSE);
-			glEnable(GL_DEPTH_TEST);
-			glEnable(GL_BLEND);
-			//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-			glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-
+			preRenderLines(writeDepth);
 			lineVAO.bind();
 			lineVBO.setData(std::span(lineBuffer.data(), lineBuffer.size()));
 			lineVAO.draw(toDrawMode(mode), 0, lineBuffer.size());
-
-			glDisable(GL_BLEND);
-			glDepthMask(GL_TRUE);
-
+			postRenderLines();
 			lineBuffer.clear();
 		}
 	}
-	void UIRenderer::flushTextured(const glm::mat4& matrix, int textureUnit) {
+	void UIRenderer::flushTextured(const glm::mat4& matrix, const TriMode mode, bool writeDepth, int textureUnit) {
 		if (!texturedTriBuffer.empty()) {
 			textureShader.bind();
 			textureShader.setUniform("matrix", matrix);
 			textureShader.setUniform("textureSampler", textureUnit);
-
-			glEnable(GL_CULL_FACE);
-			glDepthMask(GL_FALSE);
-			glEnable(GL_DEPTH_TEST);
-			glEnable(GL_BLEND);
-			//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-			glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-
+			preRenderTextured(writeDepth);
 			texturedVAO.bind();
 			texturedVBO.setData(std::span(texturedTriBuffer.data(), texturedTriBuffer.size()));
-			texturedVAO.draw(DrawMode::TRIANGLES, 0, texturedTriBuffer.size());
-
-			glDisable(GL_BLEND);
-			glDepthMask(GL_TRUE);
-
+			texturedVAO.draw(toDrawMode(mode), 0, texturedTriBuffer.size());
+			postRenderTextured();
 			texturedTriBuffer.clear();
 		}
 	}
@@ -96,54 +103,90 @@ namespace eng {
 		flushLines();
 		texturedTriBuffer.clear(); // don't render the textured tris since there's no way of knowing if the correct texture is bound
 	}
-	
-	void UIRenderer::drawQuad(const UIVertColor& a, const UIVertColor& b, const UIVertColor& c, const UIVertColor& d) {
-		coloredTriBuffer.insert(coloredTriBuffer.end(), {
-			a, b, c, c, b, d,
-		});
+
+	void UIRenderer::drawColoredQuad(const UIVertColor& a, const UIVertColor& b, const UIVertColor& c, const UIVertColor& d) {
+		coloredTriBuffer.insert(coloredTriBuffer.end(), { a, b, c, c, b, d, });
 	}
-	void UIRenderer::drawQuad(const glm::vec3& a, const glm::vec3& b, const glm::vec3& c, const glm::vec3& d, const Color& color) {
+	void UIRenderer::drawColoredQuad(const glm::vec3& a, const glm::vec3& b, const glm::vec3& c, const glm::vec3& d, const Color& color) {
 		coloredTriBuffer.insert(coloredTriBuffer.end(), {
 			{ a, color }, { b, color }, { c, color }, { c, color }, { b, color }, { d, color },
 		});
 	}
-	void UIRenderer::drawQuad(const glm::vec2& a, const glm::vec2& b, const glm::vec2& c, const glm::vec2& d, const Color& color) {
+	void UIRenderer::drawColoredQuad(const glm::vec2& a, const glm::vec2& b, const glm::vec2& c, const glm::vec2& d, const Color& color) {
 		coloredTriBuffer.insert(coloredTriBuffer.end(), {
 			{ a, color }, { b, color }, { c, color }, { c, color }, { b, color }, { d, color },
 		});
 	}
-	void UIRenderer::drawQuad(const UIVertTex& a, const UIVertTex& b, const UIVertTex& c, const UIVertTex& d) {
-		texturedTriBuffer.insert(texturedTriBuffer.end(), {
-			a, b, c, c, b, d,
+	void UIRenderer::drawColoredQuad(const glm::vec3& p, const glm::vec2& s, const Color& color) {
+		const glm::vec3 b { p.x, p.y + s.y, p.z };
+		const glm::vec3 c { p.x + s.x, p.y, p.z };
+		const glm::vec3 d { p.x + s.x, p.y + s.y, p.z };
+		coloredTriBuffer.insert(coloredTriBuffer.end(), {
+			{ p, color }, { b, color }, { c, color }, { c, color }, { b, color }, { d, color },
 		});
 	}
-	void UIRenderer::drawQuad(const UIVertTex& a, const UIVertTex& b, const UIVertTex& c, const UIVertTex& d, const Color& color) {
+	void UIRenderer::drawColoredQuad(const glm::vec2& p, const glm::vec2& s, const Color& color) {
+		const glm::vec2 b { p.x, p.y + s.y };
+		const glm::vec2 c { p.x + s.x, p.y };
+		const glm::vec2 d { p.x + s.x, p.y + s.y };
+		coloredTriBuffer.insert(coloredTriBuffer.end(), {
+			{ p, color }, { b, color }, { c, color }, { c, color }, { b, color }, { d, color },
+		});
+	}
+	void UIRenderer::drawTexturedQuad(const UIVertTex& a, const UIVertTex& b, const UIVertTex& c, const UIVertTex& d) {
+		texturedTriBuffer.insert(texturedTriBuffer.end(), { a, b, c, c, b, d, });
+	}
+	void UIRenderer::drawTexturedQuad(const UIVertTex& a, const UIVertTex& b, const UIVertTex& c, const UIVertTex& d, const Color& color) {
 		texturedTriBuffer.insert(texturedTriBuffer.end(), {
 			{ a.pos, a.texCoord, a.color * color }, { b.pos, b.texCoord, b.color * color }, { c.pos, c.texCoord, c.color * color },
 			{ c.pos, c.texCoord, c.color * color }, { b.pos, b.texCoord, b.color * color }, { d.pos, d.texCoord, d.color * color },
 		});
 	}
-	void UIRenderer::drawTri(const UIVertColor& a, const UIVertColor& b, const UIVertColor& c) {
-		coloredTriBuffer.insert(coloredTriBuffer.end(), {
-			a, b, c,
-		});
+	void UIRenderer::drawTexturedQuad(const glm::vec3& p, const glm::vec2& s, const glm::vec2& minUV, const glm::vec2& maxUV) {
+		const UIVertTex a { p, minUV };
+		const UIVertTex b { { p.x, p.y + s.y, p.z }, { minUV.x, maxUV.y } };
+		const UIVertTex c { { p.x + s.x, p.y, p.z }, { maxUV.x, minUV.y } };
+		const UIVertTex d { { p.x + s.x, p.y + s.y, p.z }, maxUV };
+		texturedTriBuffer.insert(texturedTriBuffer.end(), { a, b, c, c, b, d, });
 	}
-	void UIRenderer::drawTri(const glm::vec3& a, const glm::vec3& b, const glm::vec3& c, const Color& color) {
+	void UIRenderer::drawTexturedQuad(const glm::vec2& p, const glm::vec2& s, const glm::vec2& minUV, const glm::vec2& maxUV) {
+		const UIVertTex a { p, minUV };
+		const UIVertTex b { { p.x, p.y + s.y }, { minUV.x, maxUV.y } };
+		const UIVertTex c { { p.x + s.x, p.y }, { maxUV.x, minUV.y } };
+		const UIVertTex d { { p.x + s.x, p.y + s.y }, maxUV };
+		texturedTriBuffer.insert(texturedTriBuffer.end(), { a, b, c, c, b, d, });
+	}
+	void UIRenderer::drawTexturedQuad(const glm::vec3& p, const glm::vec2& s, const glm::vec2& minUV, const glm::vec2& maxUV, const Color& color) {
+		const UIVertTex a { p, minUV, color };
+		const UIVertTex b { { p.x, p.y + s.y, p.z }, { minUV.x, maxUV.y }, color };
+		const UIVertTex c { { p.x + s.x, p.y, p.z }, { maxUV.x, minUV.y }, color };
+		const UIVertTex d { { p.x + s.x, p.y + s.y, p.z }, maxUV, color };
+		texturedTriBuffer.insert(texturedTriBuffer.end(), { a, b, c, c, b, d, });
+	}
+	void UIRenderer::drawTexturedQuad(const glm::vec2& p, const glm::vec2& s, const glm::vec2& minUV, const glm::vec2& maxUV, const Color& color) {
+		const UIVertTex a { p, minUV, color  };
+		const UIVertTex b { { p.x, p.y + s.y }, { minUV.x, maxUV.y }, color };
+		const UIVertTex c { { p.x + s.x, p.y }, { maxUV.x, minUV.y }, color };
+		const UIVertTex d { { p.x + s.x, p.y + s.y }, maxUV, color };
+		texturedTriBuffer.insert(texturedTriBuffer.end(), { a, b, c, c, b, d, });
+	}
+	void UIRenderer::drawColoredTri(const UIVertColor& a, const UIVertColor& b, const UIVertColor& c) {
+		coloredTriBuffer.insert(coloredTriBuffer.end(), { a, b, c, });
+	}
+	void UIRenderer::drawColoredTri(const glm::vec3& a, const glm::vec3& b, const glm::vec3& c, const Color& color) {
 		coloredTriBuffer.insert(coloredTriBuffer.end(), {
 			{ a, color }, { b, color }, { c, color },
 		});
 	}
-	void UIRenderer::drawTri(const glm::vec2& a, const glm::vec2& b, const glm::vec2& c, const Color& color) {
+	void UIRenderer::drawColoredTri(const glm::vec2& a, const glm::vec2& b, const glm::vec2& c, const Color& color) {
 		coloredTriBuffer.insert(coloredTriBuffer.end(), {
 			{ a, color }, { b, color }, { c, color },
 		});
 	}
-	void UIRenderer::drawTri(const UIVertTex& a, const UIVertTex& b, const UIVertTex& c) {
-		texturedTriBuffer.insert(texturedTriBuffer.end(), {
-			a, b, c,
-		});
+	void UIRenderer::drawTexturedTri(const UIVertTex& a, const UIVertTex& b, const UIVertTex& c) {
+		texturedTriBuffer.insert(texturedTriBuffer.end(), { a, b, c, });
 	}
-	void UIRenderer::drawTri(const UIVertTex& a, const UIVertTex& b, const UIVertTex& c, const Color& color) {
+	void UIRenderer::drawTexturedTri(const UIVertTex& a, const UIVertTex& b, const UIVertTex& c, const Color& color) {
 		texturedTriBuffer.insert(texturedTriBuffer.end(), {
 			{ a.pos, a.texCoord, a.color * color }, { b.pos, b.texCoord, b.color * color }, { c.pos, c.texCoord, c.color * color },
 		});

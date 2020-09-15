@@ -3,6 +3,7 @@
 #include <vector>
 #include <initializer_list>
 #include <iterator>
+#include <span>
 #include <type_traits>
 
 #include "render/VertexArray.h"
@@ -73,19 +74,27 @@ namespace eng {
 		UIRenderer(UIRenderer&&) = default;
 		UIRenderer& operator =(UIRenderer&&) = default;
 
-		const glm::ivec2& getUISize() const { return renderer->getWindowSizeScaled(); }
-		const glm::vec2& getContentScale() const { return renderer->getWindowContentScale(); }
+		//const glm::ivec2& getUISize() const noexcept { return renderer->getWindowSizeScaled(); }
+		//const glm::vec2& getContentScale() const noexcept { return renderer->getWindowContentScale(); }
+		const glm::vec2& getUISize() const noexcept { return renderer->getUISize(); }
+		float getUIScale() const noexcept { return static_cast<float>(renderer->getUIScale()); }
 
-		void drawQuad(const UIVertColor&, const UIVertColor&, const UIVertColor&, const UIVertColor&);
-		void drawQuad(const glm::vec3&, const glm::vec3&, const glm::vec3&, const glm::vec3&, const Color& color);
-		void drawQuad(const glm::vec2&, const glm::vec2&, const glm::vec2&, const glm::vec2&, const Color& color);
-		void drawQuad(const UIVertTex&, const UIVertTex&, const UIVertTex&, const UIVertTex&);
-		void drawQuad(const UIVertTex&, const UIVertTex&, const UIVertTex&, const UIVertTex&, const Color& color);
-		void drawTri(const UIVertColor&, const UIVertColor&, const UIVertColor&);
-		void drawTri(const glm::vec3&, const glm::vec3&, const glm::vec3&, const Color& color);
-		void drawTri(const glm::vec2&, const glm::vec2&, const glm::vec2&, const Color& color);
-		void drawTri(const UIVertTex&, const UIVertTex&, const UIVertTex&);
-		void drawTri(const UIVertTex&, const UIVertTex&, const UIVertTex&, const Color& color);
+		void drawColoredQuad(const UIVertColor&, const UIVertColor&, const UIVertColor&, const UIVertColor&);
+		void drawColoredQuad(const glm::vec3&, const glm::vec3&, const glm::vec3&, const glm::vec3&, const Color& color);
+		void drawColoredQuad(const glm::vec2&, const glm::vec2&, const glm::vec2&, const glm::vec2&, const Color& color);
+		void drawColoredQuad(const glm::vec3& p, const glm::vec2& s, const Color& color);
+		void drawColoredQuad(const glm::vec2& p, const glm::vec2& s, const Color& color);
+		void drawTexturedQuad(const UIVertTex&, const UIVertTex&, const UIVertTex&, const UIVertTex&);
+		void drawTexturedQuad(const UIVertTex&, const UIVertTex&, const UIVertTex&, const UIVertTex&, const Color& color);
+		void drawTexturedQuad(const glm::vec3& p, const glm::vec2& s, const glm::vec2& minUV, const glm::vec2& maxUV);
+		void drawTexturedQuad(const glm::vec2& p, const glm::vec2& s, const glm::vec2& minUV, const glm::vec2& maxUV);
+		void drawTexturedQuad(const glm::vec3& p, const glm::vec2& s, const glm::vec2& minUV, const glm::vec2& maxUV, const Color& color);
+		void drawTexturedQuad(const glm::vec2& p, const glm::vec2& s, const glm::vec2& minUV, const glm::vec2& maxUV, const Color& color);
+		void drawColoredTri(const UIVertColor&, const UIVertColor&, const UIVertColor&);
+		void drawColoredTri(const glm::vec3&, const glm::vec3&, const glm::vec3&, const Color& color);
+		void drawColoredTri(const glm::vec2&, const glm::vec2&, const glm::vec2&, const Color& color);
+		void drawTexturedTri(const UIVertTex&, const UIVertTex&, const UIVertTex&);
+		void drawTexturedTri(const UIVertTex&, const UIVertTex&, const UIVertTex&, const Color& color);
 		void drawLine(const UIVertColor&, const UIVertColor&);
 		void drawLine(const glm::vec3&, const glm::vec3&, const Color& color);
 		void drawLine(const glm::vec2&, const glm::vec2&, const Color& color);
@@ -109,12 +118,31 @@ namespace eng {
 
 		void render(const float partialTicks);
 
-		void flushColored(const glm::mat4& matrix, const TriMode mode = TriMode::TRIANGLES);
-		inline void flushColored(const TriMode mode = TriMode::TRIANGLES) { flushColored(renderer->getOrthoMatrix(), mode); }
-		void flushLines(const glm::mat4& matrix, const LineMode mode = LineMode::LINES);
-		inline void flushLines(const LineMode mode = LineMode::LINES) { flushLines(renderer->getOrthoMatrix(), mode); }
-		void flushTextured(const glm::mat4& matrix, int textureUnit = 0);
-		inline void flushTextured(int textureUnit = 0) { flushTextured(renderer->getOrthoMatrix(), textureUnit); }
+		void flushColored(const glm::mat4& matrix, const TriMode mode = TriMode::TRIANGLES, bool writeDepth = true);
+		inline void flushColored(const TriMode mode = TriMode::TRIANGLES, bool writeDepth = true) {
+			flushColored(renderer->getOrthoMatrix(), mode, writeDepth);
+		}
+		void flushLines(const glm::mat4& matrix, const LineMode mode = LineMode::LINES, bool writeDepth = true);
+		inline void flushLines(const LineMode mode = LineMode::LINES, bool writeDepth = true) {
+			flushLines(renderer->getOrthoMatrix(), mode, writeDepth);
+		}
+		void flushTextured(const glm::mat4& matrix, const TriMode mode = TriMode::TRIANGLES, bool writeDepth = true, int textureUnit = 0);
+		inline void flushTextured(const TriMode mode = TriMode::TRIANGLES, bool writeDepth = true, int textureUnit = 0) {
+			flushTextured(renderer->getOrthoMatrix(), mode, writeDepth, textureUnit);
+		}
+
+		//void renderColoredImmediate(std::span<const UIVertColor> verts, glm::mat4& matrix, const TriMode mode = TriMode::TRIANGLES, bool writeDepth = true);
+		//inline void renderColoredImmediate(std::initializer_list<UIVertColor> verts, glm::mat4& matrix, const TriMode mode = TriMode::TRIANGLES, bool writeDepth = true) {
+		//	renderColoredImmediate(std::span(verts.begin(), verts.end()), matrix, mode, writeDepth);
+		//}
+		//void renderLinesImmediate(std::span<const UIVertColor> verts, glm::mat4& matrix, const LineMode mode = LineMode::LINES, bool writeDepth = true);
+		//inline void renderLinesImmediate(std::initializer_list<UIVertColor> verts, glm::mat4& matrix, const LineMode mode = LineMode::LINES, bool writeDepth = true) {
+		//	renderLinesImmediate(std::span(verts.begin(), verts.end()), matrix, mode, writeDepth);
+		//}
+		//void renderTexturedImmediate(std::span<const UIVertTex> verts, glm::mat4& matrix, const TriMode mode = TriMode::TRIANGLES, bool writeDepth = true, int textureUnit = 0);
+		//inline void renderTexturedImmediate(std::initializer_list<UIVertTex> verts, glm::mat4& matrix, const TriMode mode = TriMode::TRIANGLES, bool writeDepth = true, int textureUnit = 0) {
+		//	renderTexturedImmediate(std::span(verts.begin(), verts.end()), matrix, mode, writeDepth, textureUnit);
+		//}
 
 	private:
 

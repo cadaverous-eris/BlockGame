@@ -31,7 +31,7 @@ namespace eng {
 			glDeleteFramebuffers(1, &id);
 		}
 	}
-	
+
 	FrameBuffer::Status FrameBuffer::getStatus(const Target target) const {
 		bind((target == Target::READ_FRAMEBUFFER) ? target : Target::DRAW_FRAMEBUFFER);
 		return Status { glCheckFramebufferStatus(to_underlying(target)) };
@@ -55,20 +55,20 @@ namespace eng {
 
 	void FrameBuffer::clearColorBuffer(const glm::vec4& value, size_t bufferIndex) const {
 		bind(Target::DRAW_FRAMEBUFFER);
-		glClearBufferfv(GL_COLOR, bufferIndex, reinterpret_cast<const float*>(&value));
+		glClearBufferfv(GL_COLOR, static_cast<GLint>(bufferIndex), reinterpret_cast<const float*>(&value));
 	}
 	void FrameBuffer::clearColorBuffer(const glm::ivec4& value, size_t bufferIndex) const {
 		bind(Target::DRAW_FRAMEBUFFER);
-		glClearBufferiv(GL_COLOR, bufferIndex, reinterpret_cast<const int32_t*>(&value));
+		glClearBufferiv(GL_COLOR, static_cast<GLint>(bufferIndex), reinterpret_cast<const int32_t*>(&value));
 	}
 	void FrameBuffer::clearColorBuffer(const glm::uvec4& value, size_t bufferIndex) const {
 		bind(Target::DRAW_FRAMEBUFFER);
-		glClearBufferuiv(GL_COLOR, bufferIndex, reinterpret_cast<const uint32_t*>(&value));
+		glClearBufferuiv(GL_COLOR, static_cast<GLint>(bufferIndex), reinterpret_cast<const uint32_t*>(&value));
 	}
 	void FrameBuffer::clearColorBuffer(const Color& value, size_t bufferIndex) const {
 		bind(Target::DRAW_FRAMEBUFFER);
 		const float v[4] { value.r / 255.0f, value.g / 255.0f, value.b / 255.0f, value.a / 255.0f };
-		glClearBufferfv(GL_COLOR, bufferIndex, v);
+		glClearBufferfv(GL_COLOR, static_cast<GLint>(bufferIndex), v);
 	}
 	void FrameBuffer::clearDepthBuffer(const float depth) const {
 		bind(Target::DRAW_FRAMEBUFFER);
@@ -83,7 +83,7 @@ namespace eng {
 		glClearBufferfi(GL_DEPTH_STENCIL, 0, depth, stencil);
 	}
 
-	inline static bool blitRegionsOverlap(const glm::ivec2& srcMin, const glm::ivec2& srcMax, const glm::ivec2& destMin, const glm::ivec2& destMax) {
+	[[maybe_unused]] inline static bool blitRegionsOverlap(const glm::ivec2& srcMin, const glm::ivec2& srcMax, const glm::ivec2& destMin, const glm::ivec2& destMax) {
 		return !((destMin.x >= srcMax.x) ||
 				 (destMax.x <= srcMin.x) ||
 				 (destMax.y <= srcMin.y) ||

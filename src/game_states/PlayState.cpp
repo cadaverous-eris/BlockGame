@@ -2,8 +2,6 @@
 
 #include <sstream>
 #include <string>
-#include <chrono>
-#include <filesystem>
 
 #include <glm/vec3.hpp>
 #include <glm/vec2.hpp>
@@ -14,6 +12,8 @@
 #include "util/math/math.h"
 #include "util/resources/Image.h"
 #include "util/resources/ResourceManager.h"
+#include "gui/inventory/GuiPlayerInventory.h"
+#include "gui/menu/GuiPauseMenu.h"
 #include "util/nbt/NBT.h" // TODO: remove
 #include "util/IOUtils.h" // TODO: remove
 
@@ -26,9 +26,10 @@ namespace eng {
 			world(), // TODO: take arguments
 			worldRenderer(&game->renderer),
 			hudRenderer(&game->renderer),
-			toggleCursorKeyHandler(*input::TOGGLE_CURSOR, [this](const input::KeyInput&) { this->toggleCursor(); }),
-			printCameraKeyHandler(*input::PRINT_CAMERA, [this](const input::KeyInput&) { this->camera.log(); }),
-			takeScreenshotKeyHandler(*input::TAKE_SCREENSHOT, [this](const input::KeyInput&) { this->takeScreenshot(); }) {
+			pauseKeyHandler(*input::keybinds::PAUSE, [this](const input::KeyInput&) { this->openPauseMenu(); }),
+			inventoryKeyHandler(*input::keybinds::INVENTORY, [this](const input::KeyInput&) { this->openInventory(); }),
+			printCameraKeyHandler(*input::keybinds::PRINT_CAMERA, [this](const input::KeyInput&) { this->camera.log(); }),
+			takeScreenshotKeyHandler(*input::keybinds::TAKE_SCREENSHOT, [this](const input::KeyInput&) { this->takeScreenshot(); }) {
 		world.setPlayer(&camera);
 		world.setWorldRenderer(&worldRenderer);
 
@@ -48,51 +49,50 @@ namespace eng {
 		//	std::cout << '\n' << nbt.toSNBT(2) << '\n' << '\n';
 		//}
 
-		std::cout << '\n';
-		const std::string nbtFilePath = "bigtest.nbt";//"test.nbt";
-		const std::string nbtFileName = [&]() -> std::string {
-			std::string_view fileName = std::string_view(nbtFilePath);
-			const auto lastDotIndex = fileName.find_last_of('.');
-			const auto lastSlashIndex = fileName.find_last_of('/', lastDotIndex);
-			if (lastDotIndex != std::string_view::npos)
-				fileName = fileName.substr(0, lastDotIndex);
-			if ((lastSlashIndex != std::string_view::npos) && ((lastSlashIndex + 1) < fileName.size()))
-				fileName = fileName.substr(lastSlashIndex + 1);
-			return std::string(fileName);
-		}();
-		const bool isFileCompressed = true;
-		const auto fileData = isFileCompressed ?
-				readCompressedBinaryFile("../nbt_testing/" + nbtFilePath) :
-				readBinaryFile("../nbt_testing/" + nbtFilePath);
-		std::cout << "Uncompressed size of '" << nbtFilePath << "': " << fileData.size() << '\n';
-		bool parsedNBT = false;
-		nbt::NBT nbt {};
-		try {
-			nbt = nbt::parseNBT(std::span<const unsigned char>(fileData.data(), fileData.size()));
-			parsedNBT = true;
-		} catch(const nbt::ParseError& parseError) {
-			std::cerr << '\n' << "Error parsing NBT:" << '\n';
-			std::cerr << parseError.what() << '\n' << '\n';
-		}
-		const std::string snbtFilePath = "../nbt_testing/" + (nbtFileName.empty() ? std::string("test") : nbtFileName) + ".snbt";
-		const std::string nbtCopyFilePath = "../nbt_testing/" + (nbtFileName.empty() ? std::string("test") : nbtFileName) + "_reserialized.nbt";
-		const std::string snbtCopyFilePath = "../nbt_testing/" + (nbtFileName.empty() ? std::string("test") : nbtFileName) + "_reserialized.snbt";
-		if (parsedNBT) {
-			writeTextFile(snbtFilePath, nbt.toSNBT(2));
-			std::cout << '\n' << "Successfully parsed " << nbtFilePath << ", SNBT written to " << snbtFilePath << '\n' << '\n';
-			//std::cout << '\n' << nbt.toSNBT(2) << '\n' << '\n';
-
-			const auto reserializedBytes = [&]() {
-				const auto it = nbt.asCompound().cbegin();
-				return it->second.toBinary(it->first);
-			}();
-			if (isFileCompressed)
-				writeCompressedBinaryFile(nbtCopyFilePath, std::span<const unsigned char>(reserializedBytes.begin(), reserializedBytes.end()));
-			else
-				writeBinaryFile(nbtCopyFilePath, std::span<const unsigned char>(reserializedBytes.begin(), reserializedBytes.end()));
-			const auto reserializedNBT = nbt::parseNBT(std::span<const unsigned char>(reserializedBytes.begin(), reserializedBytes.end()));
-			writeTextFile(snbtCopyFilePath, reserializedNBT.toSNBT(2));
-		}
+		//std::cout << '\n';
+		//const std::string nbtFilePath = "bigtest.nbt";//"test.nbt";
+		//const std::string nbtFileName = [&]() -> std::string {
+		//	std::string_view fileName = std::string_view(nbtFilePath);
+		//	const auto lastDotIndex = fileName.find_last_of('.');
+		//	const auto lastSlashIndex = fileName.find_last_of('/', lastDotIndex);
+		//	if (lastDotIndex != std::string_view::npos)
+		//		fileName = fileName.substr(0, lastDotIndex);
+		//	if ((lastSlashIndex != std::string_view::npos) && ((lastSlashIndex + 1) < fileName.size()))
+		//		fileName = fileName.substr(lastSlashIndex + 1);
+		//	return std::string(fileName);
+		//}();
+		//const bool isFileCompressed = true;
+		//const auto fileData = isFileCompressed ?
+		//		readCompressedBinaryFile("../nbt_testing/" + nbtFilePath) :
+		//		readBinaryFile("../nbt_testing/" + nbtFilePath);
+		//std::cout << "Uncompressed size of '" << nbtFilePath << "': " << fileData.size() << '\n';
+		//bool parsedNBT = false;
+		//nbt::NBT nbt {};
+		//try {
+		//	nbt = nbt::parseNBT(std::span<const unsigned char>(fileData.data(), fileData.size()));
+		//	parsedNBT = true;
+		//} catch(const nbt::ParseError& parseError) {
+		//	std::cerr << '\n' << "Error parsing NBT:" << '\n';
+		//	std::cerr << parseError.what() << '\n' << '\n';
+		//}
+		//const std::string snbtFilePath = "../nbt_testing/" + (nbtFileName.empty() ? std::string("test") : nbtFileName) + ".snbt";
+		//const std::string nbtCopyFilePath = "../nbt_testing/" + (nbtFileName.empty() ? std::string("test") : nbtFileName) + "_reserialized.nbt";
+		//const std::string snbtCopyFilePath = "../nbt_testing/" + (nbtFileName.empty() ? std::string("test") : nbtFileName) + "_reserialized.snbt";
+		//if (parsedNBT) {
+		//	writeTextFile(snbtFilePath, nbt.toSNBT(2));
+		//	std::cout << '\n' << "Successfully parsed " << nbtFilePath << ", SNBT written to " << snbtFilePath << '\n' << '\n';
+		//	//std::cout << '\n' << nbt.toSNBT(2) << '\n' << '\n';
+		//	const auto reserializedBytes = [&]() {
+		//		const auto it = nbt.asCompound().cbegin();
+		//		return it->second.toBinary(it->first);
+		//	}();
+		//	if (isFileCompressed)
+		//		writeCompressedBinaryFile(nbtCopyFilePath, std::span<const unsigned char>(reserializedBytes.begin(), reserializedBytes.end()));
+		//	else
+		//		writeBinaryFile(nbtCopyFilePath, std::span<const unsigned char>(reserializedBytes.begin(), reserializedBytes.end()));
+		//	const auto reserializedNBT = nbt::parseNBT(std::span<const unsigned char>(reserializedBytes.begin(), reserializedBytes.end()));
+		//	writeTextFile(snbtCopyFilePath, reserializedNBT.toSNBT(2));
+		//}
 
 		//std::vector<Color> testByteVec { {}, color::aquamarine, color::black, };
 		//std::vector<uint64_t> testByteVec { 0x00, 0x01, 0xFF, 0x7D, 0x7F, };
@@ -112,7 +112,6 @@ namespace eng {
 		}*/
 		//vbo.setData(quads, sizeof(quads));
 		//vbo.setData(std::span<BlockQuad>(std::begin(quads), std::end(quads)));
-
 		// make sure the vbo is bound when setting up vertex attributes
 		//vbo.bind();
 		/*VertexFormat vertexFormat {
@@ -133,9 +132,10 @@ namespace eng {
 		game->inputManager.setCursorMode(input::CursorMode::DISABLED);
 		game->inputManager.input();
 
-		//game->window.requestAttention();
-		if (!game->window.hasFocus()) // Disable mouse capture if the window is not focused
-			game->inputManager.setCursorMode(input::CursorMode::NORMAL);
+		if (!game->window.hasFocus()) {
+			openPauseMenu();
+			game->window.requestAttention();
+		}
 	}
 
 	/*
@@ -167,19 +167,21 @@ namespace eng {
 	}
 
 	void PlayState::update() {
+		if (game->isPaused())
+			return; // TODO: continue loading/generating chunks while game is paused
 
 		camera.update();
 
 		glm::vec3 cameraMovement(0.0f, 0.0f, 0.0f);
-		if (input::MOVE_FORWARD->isPressed()) cameraMovement.z += 1.0f;
-		if (input::MOVE_BACKWARD->isPressed()) cameraMovement.z -= 1.0f;
-		if (input::MOVE_LEFT->isPressed()) cameraMovement.x -= 1.0f;
-		if (input::MOVE_RIGHT->isPressed()) cameraMovement.x += 1.0f;
+		if (input::keybinds::MOVE_FORWARD->isPressed()) cameraMovement.z += 1.0f;
+		if (input::keybinds::MOVE_BACKWARD->isPressed()) cameraMovement.z -= 1.0f;
+		if (input::keybinds::MOVE_LEFT->isPressed()) cameraMovement.x -= 1.0f;
+		if (input::keybinds::MOVE_RIGHT->isPressed()) cameraMovement.x += 1.0f;
 		if (cameraMovement.x != 0 && cameraMovement.z != 0) {
 			cameraMovement = glm::normalize(cameraMovement);
 		}
-		if (input::SNEAK->isPressed()) cameraMovement.y -= 1.0f;
-		if (input::JUMP->isPressed()) cameraMovement.y += 1.0f;
+		if (input::keybinds::SNEAK->isPressed()) cameraMovement.y -= 1.0f;
+		if (input::keybinds::JUMP->isPressed()) cameraMovement.y += 1.0f;
 		cameraMovement *= cameraSpeed;
 		if (game->inputManager.getCursorMode() == input::CursorMode::DISABLED) {
 			camera.move(cameraMovement);
@@ -199,13 +201,13 @@ namespace eng {
 
 		if (game->inputManager.getCursorMode() == input::CursorMode::DISABLED) {
 			// try block destruction
-			if (input::BREAK_BLOCK->isPressed() && playerRayCastResult.hitBlock() && (blockBreakDelay <= 0)) {
+			if (input::keybinds::BREAK_BLOCK->isPressed() && playerRayCastResult.hitBlock() && (blockBreakDelay <= 0)) {
 				world.setBlockState(playerRayCastResult.blockPos, blocks::air, true, true, true, MeshingPriority::PlayerInteract);
 				blockBreakDelay = 4;
 			}
 
 			// try block placement
-			if (input::PLACE_BLOCK->isPressed() && playerRayCastResult.hitBlock() &&
+			if (input::keybinds::PLACE_BLOCK->isPressed() && playerRayCastResult.hitBlock() &&
 					(playerRayCastResult.face != Direction::UNDEFINED) && (blockPlaceDelay <= 0)) {
 				const auto hitBlockState = world.getBlockState(playerRayCastResult.blockPos);
 				if (hitBlockState.getBlock().isReplaceable(hitBlockState)) {
@@ -226,8 +228,8 @@ namespace eng {
 				}
 			}
 
-			const bool tryPlaceFluid = input::DEBUG_PLACE_FLUID->isPressed() && (fluidPlaceDelay <= 0);
-			const bool tryBreakFluid = input::DEBUG_BREAK_FLUID->isPressed() && (fluidBreakDelay <= 0);
+			const bool tryPlaceFluid = input::keybinds::DEBUG_PLACE_FLUID->isPressed() && (fluidPlaceDelay <= 0);
+			const bool tryBreakFluid = input::keybinds::DEBUG_BREAK_FLUID->isPressed() && (fluidBreakDelay <= 0);
 			if (tryPlaceFluid || tryBreakFluid) {
 				const RayCastResultF fluidRayCast = world.rayCast(ray, RayCastMask::Blocks | RayCastMask::Fluids | RayCastMask::Entities);
 
@@ -254,8 +256,7 @@ namespace eng {
 							}
 						}
 					} else if (fluidRayCast.hitFluid()) {
-
-
+						// TODO: place fluid against the hit fluid
 
 					}
 				}
@@ -276,7 +277,6 @@ namespace eng {
 		/*
 		// bind the shaderProgram
 		shaderProgram.bind();
-
 		// for model matrix: do translation, then scaling, then rotation
 		float interpolatedRotation = prevRotation + ((rotation - prevRotation) * partialTicks);
 		modelMatrix = glm::identity<glm::mat4>();
@@ -284,14 +284,12 @@ namespace eng {
 		modelMatrix = glm::translate(modelMatrix, glm::vec3(-0.5f, -0.5f, -0.5f));
 		// TODO: scaling
 		modelMatrix = glm::rotate(modelMatrix, glm::radians(interpolatedRotation), glm::vec3(0.4f, 1.0f, 0.7f));
-
 		// use texture unit 0
 		shaderProgram.setUniform("textureSampler", 0);
 		// upload the matrices to the gpu
 		shaderProgram.setUniform("modelMatrix", modelMatrix);
 		shaderProgram.setUniform("viewMatrix", camera.getViewMatrix(partialTicks));
 		shaderProgram.setUniform("projectionMatrix", game->renderer->getProjectionMatrix());
-
 		// draw
 		//vao.draw(Renderer::DrawMode::TRIANGLES, ebo);
 		vao.draw(Renderer::DrawMode::POINTS, 0, 6);
@@ -304,52 +302,29 @@ namespace eng {
 		// TODO: implement
 	}
 
-	void PlayState::toggleCursor() const {
-		const auto cursorMode = game->inputManager.getCursorMode();
-		if (cursorMode == input::CursorMode::NORMAL) {
-			this->game->inputManager.setCursorMode(input::CursorMode::DISABLED);
-		} else if (cursorMode == input::CursorMode::DISABLED) {
-			this->game->inputManager.setCursorMode(input::CursorMode::NORMAL);
+	void PlayState::onGuiOpened() {
+		if (game->inputManager.getCursorMode() == input::CursorMode::DISABLED) {
+			game->inputManager.setCursorMode(input::CursorMode::NORMAL); // enable the mouse cursor
+			// set the cursor position to the center of the window
+			game->inputManager.setCursorPos(static_cast<glm::dvec2>(game->window.getSize()) / 2.0);
 		}
 	}
+	void PlayState::onGuiClosed() {
+		game->inputManager.setCursorMode(input::CursorMode::DISABLED); // disable the mouse cursor
+	}
+
+	void PlayState::openInventory() const {
+		if (!game->getActiveGui())
+			game->openGui(std::make_unique<GuiPlayerInventory>());
+	}
+	void PlayState::openPauseMenu() const {
+		if (!game->getActiveGui())
+			game->openGui(std::make_unique<GuiPauseMenu>());
+	}
+
 
 	void PlayState::takeScreenshot() const {
-		const auto frameSize = game->renderer.getWindowSize();
-		auto frameData = std::make_unique<unsigned char[]>(frameSize.x * frameSize.y * 4);
-		FrameBuffer::unbind(FrameBuffer::Target::READ_FRAMEBUFFER);
-		Renderer::setActiveReadBuffer(Renderer::isDoubleBuffered() ? DrawBuffer::BACK : DrawBuffer::FRONT);
-		glPixelStorei(GL_PACK_ALIGNMENT, 1);
-		glReadPixels(0, 0, frameSize.x, frameSize.y, GL_RGBA, GL_UNSIGNED_BYTE, frameData.get());
-		ImageRGBA frameImage(frameData.get(), frameSize.x, frameSize.y);
-
-		namespace fs = std::filesystem;
-		fs::path screenshotFolderPath = fs::absolute("screenshots");
-		if (fs::exists(screenshotFolderPath)) {
-			if (fs::is_symlink(screenshotFolderPath)) {
-				fs::path linkPath = fs::read_symlink(screenshotFolderPath);
-				if (fs::is_directory(linkPath)) {
-					screenshotFolderPath = fs::read_symlink(screenshotFolderPath);
-				} else {
-					fs::remove_all(screenshotFolderPath);
-					fs::create_directory(screenshotFolderPath);
-				}
-			}
-			if (!fs::is_directory(screenshotFolderPath)) {
-				fs::remove_all(screenshotFolderPath);
-				fs::create_directory(screenshotFolderPath);
-			}
-		} else {
-			fs::create_directory(screenshotFolderPath);
-		}
-
-		using namespace std::chrono;
-		const auto currentTimeMillis = duration_cast<milliseconds>(steady_clock::now().time_since_epoch()).count();
-		std::ostringstream imgPathStream {};
-		imgPathStream << "screenshot_" << currentTimeMillis << ".png";
-		screenshotFolderPath /= imgPathStream.str();
-
-		// write the screenshot to a file
-		frameImage.flipY().writeImage(screenshotFolderPath.string());
+		game->renderer.takeScreenshot();
 	}
 
 }

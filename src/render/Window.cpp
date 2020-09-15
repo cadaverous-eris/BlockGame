@@ -78,6 +78,8 @@ namespace eng {
 		}*/
 
 		glfwSetWindowSizeLimits(handle, 212, 120, GLFW_DONT_CARE, GLFW_DONT_CARE);
+
+		glfwSetInputMode(handle, GLFW_LOCK_KEY_MODS, GLFW_TRUE);
 	}
 
 	Window::~Window() {
@@ -107,6 +109,22 @@ namespace eng {
 	glm::ivec2 Window::getSize() const {
 		glm::ivec2 size;
 		glfwGetFramebufferSize(handle, &size.x, &size.y);
+		return size;
+	}
+
+	int Window::getWindowWidth() const {
+		int w;
+		glfwGetWindowSize(handle, &w, nullptr);
+		return w;
+	}
+	int Window::getWindowHeight() const {
+		int h;
+		glfwGetWindowSize(handle, nullptr, &h);
+		return h;
+	}
+	glm::ivec2 Window::getWindowSize() const {
+		glm::ivec2 size;
+		glfwGetWindowSize(handle, &size.x, &size.y);
 		return size;
 	}
 

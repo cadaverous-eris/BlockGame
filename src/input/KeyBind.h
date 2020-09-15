@@ -18,24 +18,27 @@ namespace eng::input {
 	// owns all KeyBind instances
 	extern std::vector<std::unique_ptr<KeyBind>> keyBindList;
 
-	// movement keys
-	extern KeyBind* const MOVE_FORWARD;
-	extern KeyBind* const MOVE_BACKWARD;
-	extern KeyBind* const MOVE_LEFT;
-	extern KeyBind* const MOVE_RIGHT;
-	extern KeyBind* const JUMP;
-	extern KeyBind* const SNEAK;
-	extern KeyBind* const PLACE_BLOCK;
-	extern KeyBind* const BREAK_BLOCK;
-	// misc. keys
-	extern KeyBind* const TOGGLE_CURSOR;
-	extern KeyBind* const EXIT;
-	extern KeyBind* const MAXIMIZE_WINDOW;
-	extern KeyBind* const TAKE_SCREENSHOT;
-	// debugging keys
-	extern KeyBind* const PRINT_CAMERA;
-	extern KeyBind* const DEBUG_PLACE_FLUID;
-	extern KeyBind* const DEBUG_BREAK_FLUID;
+
+	namespace keybinds {
+		// movement keys
+		extern KeyBind* const MOVE_FORWARD;
+		extern KeyBind* const MOVE_BACKWARD;
+		extern KeyBind* const MOVE_LEFT;
+		extern KeyBind* const MOVE_RIGHT;
+		extern KeyBind* const JUMP;
+		extern KeyBind* const SNEAK;
+		extern KeyBind* const PLACE_BLOCK;
+		extern KeyBind* const BREAK_BLOCK;
+		// misc. keys
+		extern KeyBind* const INVENTORY;
+		extern KeyBind* const PAUSE;
+		extern KeyBind* const MAXIMIZE_WINDOW;
+		extern KeyBind* const TAKE_SCREENSHOT;
+		// debugging keys
+		extern KeyBind* const PRINT_CAMERA;
+		extern KeyBind* const DEBUG_PLACE_FLUID;
+		extern KeyBind* const DEBUG_BREAK_FLUID;
+	}
 
 
 	KeyBind* makeKeyBind(std::string&&, KeyInput&&);
@@ -99,7 +102,12 @@ namespace eng::input {
 		// resets the pressed/released state
 		void resetState() noexcept;
 
+		// returns true if the key is being pressed
 		inline bool isPressed() const noexcept { return pressed; }
+		// returns true if the key was just pressed down this input cycle
+		inline bool didPress() const noexcept { return pressed && !prevPressed; }
+		// returns true if the key was just released this input cycle
+		inline bool didRelease() const noexcept { return prevPressed && !pressed; }
 
 		inline bool isBound() const noexcept { return static_cast<bool>(keyInput); }
 
@@ -119,8 +127,8 @@ namespace eng::input {
 		void removeReleaseHandler(size_t handle) noexcept;
 
 	private:
-		void handlePress(const KeyInput& input);
-		void handleRelease(const KeyInput& input);
+		void handlePress(const KeyInput& input, bool callListeners = true);
+		void handleRelease(const KeyInput& input, bool callListeners = true);
 
 	public:
 		// RAII wrapper for press handlers

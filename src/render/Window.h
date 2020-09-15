@@ -40,7 +40,15 @@ namespace eng {
 		int getWidth() const;
 		// returns the height of the window's frame buffer
 		int getHeight() const;
-		glm::ivec2 getSize() const; // returns the framebuffer size
+		// returns the framebuffer size
+		glm::ivec2 getSize() const;
+
+		// returns the width of the window
+		int getWindowWidth() const;
+		// returns the height of the window
+		int getWindowHeight() const;
+		// returns the size of the window
+		glm::ivec2 getWindowSize() const;
 
 		glm::vec2 getContentScale() const;
 

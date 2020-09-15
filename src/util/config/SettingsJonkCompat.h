@@ -15,8 +15,9 @@ namespace jonk {
 		static Jonk toJonk(const eng::Settings& settings) {
 			JonkObject jonkObj {};
 			jonkObj.emplace("chunk_load_radius", settings.chunkLoadRadius);
+			jonkObj.emplace("ui_scale", settings.uiScale);
 			jonkObj.emplace("window_size", settings.windowSize);
-			
+
 			{ // save keybinds to settings jonk
 				using namespace eng::input;
 				JonkObject keyBindsObj {};

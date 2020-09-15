@@ -121,7 +121,7 @@ namespace eng {
 
 	inline static std::vector<const Chunk*> renderableChunks {};
 	void WorldRenderer::render(const float partialTicks, const PlayState& gameState, const World* world, const Camera* camera) {
-		Renderer::clearColor(0x00000000_c);
+		Renderer::setClearColor(0x00000000_c);
 		Renderer::clear(Renderer::ClearBit::COLOR | Renderer::ClearBit::DEPTH | Renderer::ClearBit::STENCIL);
 
 		// create a vector of pointers to all renderable chunks
@@ -221,9 +221,9 @@ namespace eng {
 		Texture::bind(worldFBOColorAttachment); // bind the main fbo color attachment texture
 
 		worldFBO.bind(FrameBufferTarget::DRAW_FRAMEBUFFER);
-		//Renderer::clearColor(0x81EBE7_c); // blue
-		Renderer::clearColor(0xF4BCEE_c); // pink 1
-		//Renderer::clearColor(0xFF88B5_c); // pink 2
+		//Renderer::setClearColor(0x81EBE7_c); // blue
+		Renderer::setClearColor(0xF4BCEE_c); // pink 1
+		//Renderer::setClearColor(0xFF88B5_c); // pink 2
 		Renderer::clear(Renderer::ClearBit::COLOR | Renderer::ClearBit::DEPTH | Renderer::ClearBit::STENCIL);
 
 		preSolidLayerRender();

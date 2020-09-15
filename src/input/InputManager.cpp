@@ -1,6 +1,10 @@
 #include "Game.h" // must be included before anything else
 #include "InputManager.h"
 
+#include <iostream>
+
+#include "gui/Gui.h"
+
 namespace eng {
 //	void key_callback(GLFWwindow* windowHandle, int key, int scancode, int action, int mods); // TODO: remove
 }
@@ -8,8 +12,6 @@ namespace eng {
 namespace eng::input {
 
 	InputManager::InputManager(Window* window) : window(window), prevCursorMode(static_cast<CursorMode>(glfwGetInputMode(window->handle, GLFW_CURSOR))) {
-		// TODO: implement
-
 		// initialize the cursor position
 		glfwGetCursorPos(window->handle, &cursorPos.x, &cursorPos.y);
 		prevCursorPos = cursorPos;
@@ -65,6 +67,7 @@ namespace eng::input {
 
 			std::cout << std::endl;
 		}*/
+
 	}
 
 	void InputManager::input() {
@@ -73,30 +76,39 @@ namespace eng::input {
 
 		prevCursorMode = getCursorMode();
 
+		// update key bindings
+		handleKeyBindingsInput();
+
 		glfwPollEvents();
 
 		// update the cursor position
 		prevCursorPos = cursorPos;
 		glfwGetCursorPos(window->handle, &cursorPos.x, &cursorPos.y);
-
-		// update key bindings
-		handleKeyBindingsInput();
 	}
 
 	void InputManager::update() {
-		
+		// TODO: implement?
+	}
+
+	void InputManager::setCursorPos(const glm::dvec2& pos) noexcept {
+		glfwSetCursorPos(window->handle, pos.x, pos.y);
+		cursorPos = pos;
+		prevCursorPos = pos;
 	}
 
 
 	// INPUT CALLBACKS
 
-	void key_callback(GLFWwindow*, int32_t keyCode, int32_t scancode, int32_t actionInt, int32_t modsInt) {
-		//const Window* window = (const Window*) glfwGetWindowUserPointer(windowPtr);
+	void key_callback(GLFWwindow* windowHandle, int32_t keyCode, int32_t scancode, int32_t actionInt, int32_t modsInt) {
+		const Window* window = Window::fromWindowHandle(windowHandle);
+
 		KeyAction action = static_cast<KeyAction>(actionInt);
 		KeyType keyType = (keyCode == static_cast<int>(Keys::KEY_UNKNOWN)) ? KeyType::KEY_SCANCODE : KeyType::KEY_NAMED;
 		ModifierBits modifiers(static_cast<uint8_t>(modsInt));
 		Key key(keyType, (keyType == KeyType::KEY_NAMED) ? keyCode : scancode);
 		KeyInput keyInput{ key, modifiers };
+
+		Gui* const activeGui = window->game->getActiveGui();
 
 		/*switch (action) {
 		case KeyAction::PRESS:   std::cout << "Key pressed with modifiers:  " << modifiers << " " << modsInt << std::endl; break;
@@ -105,25 +117,30 @@ namespace eng::input {
 		}*/
 
 		if (action == KeyAction::PRESS) {
+			const bool callListeners = (!activeGui || !activeGui->onKeyDown(keyInput, false));
 			auto keyBind = findKeyBind(keyInput);
-			if (keyBind) {
-				keyBind->handlePress(keyInput);
-			}
+			if (keyBind) keyBind->handlePress(keyInput, callListeners);
 		} else if (action == KeyAction::RELEASE) {
+			const bool callListeners = (!activeGui || !activeGui->onKeyUp(keyInput));
 			auto keyBindList = getKeyBindList(key);
 			if (keyBindList) {
-				for (auto& keyBind : *keyBindList) {
-					keyBind->handleRelease(keyInput);
-				}
+				for (auto& keyBind : *keyBindList) keyBind->handleRelease(keyInput, callListeners);
 			}
+		} else if (action == KeyAction::REPEAT) {
+			if (activeGui)
+				activeGui->onKeyDown(keyInput, true);
 		}
 	}
 
-	void mouse_button_callback(GLFWwindow*, int32_t button, int32_t actionInt, int32_t modsInt) {
-		ModifierBits modifiers(modsInt);
+	void mouse_button_callback(GLFWwindow* windowHandle, int32_t button, int32_t actionInt, int32_t modsInt) {
+		const Window* window = Window::fromWindowHandle(windowHandle);
+
+		ModifierBits modifiers(static_cast<uint8_t>(modsInt));
 		KeyAction action = static_cast<KeyAction>(actionInt);
 		Key key(KeyType::MOUSE, button);
 		KeyInput keyInput { key, modifiers };
+
+		Gui* const activeGui = window->game->getActiveGui();
 
 		/*switch (action) {
 		case KeyAction::PRESS:   std::cout << "Mouse clicked with modifiers:  " << modifiers << " " << modsInt << std::endl; break;
@@ -131,16 +148,14 @@ namespace eng::input {
 		}*/
 
 		if (action == KeyAction::PRESS) {
+			const bool callListeners = (!activeGui || !activeGui->onMouseDown(keyInput));
 			auto keyBind = findKeyBind(keyInput);
-			if (keyBind) {
-				keyBind->handlePress(keyInput);
-			}
+			if (keyBind) keyBind->handlePress(keyInput, callListeners);
 		} else if (action == KeyAction::RELEASE) {
+			const bool callListeners = (!activeGui || !activeGui->onMouseUp(keyInput));
 			auto keyBindList = getKeyBindList(key);
 			if (keyBindList) {
-				for (auto& keyBind : *keyBindList) {
-					keyBind->handleRelease(keyInput);
-				}
+				for (auto& keyBind : *keyBindList) keyBind->handleRelease(keyInput, callListeners);
 			}
 		}
 	}
@@ -151,7 +166,10 @@ namespace eng::input {
 	}
 
 	void text_input_callback(GLFWwindow* windowHandle, uint32_t codePoint) {
-		// TODO: implement
+		const Window* window = Window::fromWindowHandle(windowHandle);
+		Gui* const activeGui = window->game->getActiveGui();
+		if (activeGui)
+			activeGui->onTextInput(static_cast<char32_t>(codePoint));
 	}
 
 }

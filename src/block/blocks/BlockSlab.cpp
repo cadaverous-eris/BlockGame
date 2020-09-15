@@ -30,7 +30,7 @@ namespace eng {
 			const auto hitOffset = hitPos - glm::vec3(0.5f, 0.5f, 0.5f);
 			const auto absHitOffset = glm::abs(hitOffset);
 
-			const bool placeCenter = input::SNEAK->isPressed();
+			const bool placeCenter = input::keybinds::SNEAK->isPressed();
 
 			switch (axis) {
 			case Axis::X:
