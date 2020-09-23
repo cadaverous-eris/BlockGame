@@ -12,6 +12,8 @@
 #include "input/key_input.h"
 #include "input/KeyBind.h"
 
+#include "gui/component/GuiTextInput.h"
+
 namespace eng {
 
     class GuiScaleSlider : public GuiAbstractSlider {
@@ -45,6 +47,7 @@ namespace eng {
         GuiButton closeGuiButton;
         GuiButton exitGameButton;
         GuiScaleSlider guiScaleSlider;
+        //GuiTextInput textInputTest;
 
     public:
         GuiPauseMenu();

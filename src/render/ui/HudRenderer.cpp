@@ -45,12 +45,12 @@ namespace eng {
 		constexpr auto blockNameFontSize = 14.0f;
 		const auto blockNameLength = fontRenderer.getTextWidth(gameState.getSelectedBlock()->getName(), blockNameFontSize);
 		const auto blockNameLH = fontRenderer.getLineHeight(blockNameFontSize);
-		const glm::vec2 blockNameTextOrigin { (uiSize.x / 2) - (blockNameLength / 2), uiSize.y - 10.0f - blockNameLH };
+		const glm::vec3 blockNameTextOrigin { (uiSize.x / 2) - (blockNameLength / 2), uiSize.y - 10.0f - blockNameLH, 0 };
 		uiRenderer.drawColoredQuad(
-			glm::vec3(blockNameTextOrigin + glm::vec2{ -1, 0 }, 1),
-			glm::vec3(blockNameTextOrigin + glm::vec2{ -1, blockNameLH }, 1),
-			glm::vec3(blockNameTextOrigin + glm::vec2{ blockNameLength + 1, 0 }, 1),
-			glm::vec3(blockNameTextOrigin + glm::vec2{ blockNameLength + 1, blockNameLH }, 1),
+			blockNameTextOrigin + glm::vec3(-1, 0, 1),
+			blockNameTextOrigin + glm::vec3(-1, blockNameLH, 1),
+			blockNameTextOrigin + glm::vec3(blockNameLength + 1, 0, 1),
+			blockNameTextOrigin + glm::vec3(blockNameLength + 1, blockNameLH, 1),
 			0x0000007F_c
 		);
 		uiRenderer.flushColored();
@@ -61,7 +61,7 @@ namespace eng {
 		/*const auto testingText = u8"The quick brown fox jumps over the lazy dog. \u0394\u0398\u03A3\u03A6\u03A8\u03A9 \U0001F480 \U0001F571 \U0001F440 \U0001F435\U0001F44D \U0001F4A3 \U0001F494 \U0001F607 \U0001F608 \U0001F5E1\U0001F30E \U0001F631 \u26E7\u26B8 \u26A5 \u16C3 \u2620 \U0001F9B4";
 		const auto testingText2 = u8"I \U0001F5A4 Unicode \U00013010\U000130B8 \u26E7";
 		const float fontSizes[] { 24 };// { 128, 96, 64, 48, 36, 26, 18, 16, 14, 12 };
-		glm::vec2 pos { 10, 10 };
+		glm::vec3 pos { 10, 10, 0 };
 		for (const auto fontSize : fontSizes) {
 			std::ostringstream sstr;
 			sstr << fontSize << " " << (char*) testingText;
@@ -76,12 +76,12 @@ namespace eng {
 		std::string fpsStr = "fps:      "s;
 		if (auto [p, ec] = std::to_chars(fpsStr.data() + 5, fpsStr.data() + fpsStr.size(), fps); ec == std::errc()) {
 			const auto fpsStrV = std::string_view(fpsStr.data(), p - fpsStr.data());
-			fontRenderer.drawText(fpsStrV, glm::vec2(10), debugInfoFontSize, 0xFFF_c, { 1.0f, 2.5f, 0x000000BF_c });
+			fontRenderer.drawText(fpsStrV, glm::vec3(10, 10, 0), debugInfoFontSize, 0xFFF_c, { 1.0f, 2.5f, 0x000000BF_c });
 		}
 		const Direction cameraDir = direction::getDirection(gameState.getCamera().getLookVec());
 		if (cameraDir != Direction::UNDEFINED) {
 			const auto dirStr = "Looking: " + to_string(cameraDir);
-			fontRenderer.drawText(dirStr, glm::vec2(10, 10 + lineHeight), debugInfoFontSize, 0xFFF_c, { 1.0f, 2.5f, 0x000000BF_c });
+			fontRenderer.drawText(dirStr, glm::vec3(10, 10 + lineHeight, 0), debugInfoFontSize, 0xFFF_c, { 1.0f, 2.5f, 0x000000BF_c });
 		}
 
 		fontRenderer.flush();

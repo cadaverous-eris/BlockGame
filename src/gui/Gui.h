@@ -8,6 +8,7 @@
 
 #include "input/key_input.h"
 #include "util/Color.h"
+#include "util/text/unicode_utils.h"
 #include "render/texture/Texture.h"
 
 namespace eng {
@@ -105,38 +106,48 @@ namespace eng {
         FontRenderer& getFontRenderer() const noexcept { return *fontRenderer; }
 
 
-        void drawImage(const glm::vec3& pos, const glm::vec2& size, const glm::vec2& minUV, const glm::vec2& maxUV, const glm::vec2& textureSize, const Color& color = color::white);
-        inline void drawImage(const glm::vec2& pos, const glm::vec2& size, const glm::vec2& minUV, const glm::vec2& maxUV, const glm::vec2& textureSize, const Color& color = color::white) {
+        void drawImage(const glm::vec3& pos, const glm::vec2& size, const glm::vec2& minUV, const glm::vec2& maxUV, const glm::vec2& textureSize, const Color& color = color::white) const;
+        inline void drawImage(const glm::vec2& pos, const glm::vec2& size, const glm::vec2& minUV, const glm::vec2& maxUV, const glm::vec2& textureSize, const Color& color = color::white) const {
             drawImage(glm::vec3(pos, 0), size, minUV, maxUV, textureSize, color);
         }
-        void drawImage(const glm::vec3& pos, const glm::vec2& size, const glm::vec2& minUV, const glm::vec2& textureSize, float scale = 1, const Color& color = color::white);
-        inline void drawImage(const glm::vec2& pos, const glm::vec2& size, const glm::vec2& minUV, const glm::vec2& textureSize, float scale = 1, const Color& color = color::white) {
+        void drawImage(const glm::vec3& pos, const glm::vec2& size, const glm::vec2& minUV, const glm::vec2& textureSize, float scale = 1, const Color& color = color::white) const;
+        inline void drawImage(const glm::vec2& pos, const glm::vec2& size, const glm::vec2& minUV, const glm::vec2& textureSize, float scale = 1, const Color& color = color::white) const {
             drawImage(glm::vec3(pos, 0), size, minUV, textureSize, scale, color);
         }
 
-        void drawHorizontal3Slice(const glm::vec3& pos, int sliceSize, const glm::vec2& innerSize, const glm::vec2& minUV, const glm::vec2& textureSize, float scale = 1, const Color& color = color::white);
-        inline void drawHorizontal3Slice(const glm::vec2& pos, int sliceSize, const glm::vec2& innerSize, const glm::vec2& minUV, const glm::vec2& textureSize, float scale = 1, const Color& color = color::white) {
+        void drawHorizontal3Slice(const glm::vec3& pos, int sliceSize, const glm::vec2& innerSize, const glm::vec2& minUV, const glm::vec2& textureSize, float scale = 1, const Color& color = color::white) const;
+        inline void drawHorizontal3Slice(const glm::vec2& pos, int sliceSize, const glm::vec2& innerSize, const glm::vec2& minUV, const glm::vec2& textureSize, float scale = 1, const Color& color = color::white) const {
             drawHorizontal3Slice(glm::vec3(pos, 0), sliceSize, innerSize, minUV, textureSize, scale, color);
         }
-        void drawVertical3Slice(const glm::vec3& pos, int sliceSize, const glm::vec2& innerSize, const glm::vec2& minUV, const glm::vec2& textureSize, float scale = 1, const Color& color = color::white);
-        inline void drawVertical3Slice(const glm::vec2& pos, int sliceSize, const glm::vec2& innerSize, const glm::vec2& minUV, const glm::vec2& textureSize, float scale = 1, const Color& color = color::white) {
+        void drawVertical3Slice(const glm::vec3& pos, int sliceSize, const glm::vec2& innerSize, const glm::vec2& minUV, const glm::vec2& textureSize, float scale = 1, const Color& color = color::white) const;
+        inline void drawVertical3Slice(const glm::vec2& pos, int sliceSize, const glm::vec2& innerSize, const glm::vec2& minUV, const glm::vec2& textureSize, float scale = 1, const Color& color = color::white) const {
             drawVertical3Slice(glm::vec3(pos, 0), sliceSize, innerSize, minUV, textureSize, scale, color);
         }
 
-        void draw9Slice(const glm::vec3& pos, int sliceSize, const glm::vec2& innerSize, const glm::vec2& minUV, const glm::vec2& textureSize, float scale = 1, const Color& color = color::white);
-        inline void draw9Slice(const glm::vec2& pos, int sliceSize, const glm::vec2& innerSize, const glm::vec2& minUV, const glm::vec2& textureSize, float scale = 1, const Color& color = color::white) {
+        void draw9Slice(const glm::vec3& pos, int sliceSize, const glm::vec2& innerSize, const glm::vec2& minUV, const glm::vec2& textureSize, float scale = 1, const Color& color = color::white) const;
+        inline void draw9Slice(const glm::vec2& pos, int sliceSize, const glm::vec2& innerSize, const glm::vec2& minUV, const glm::vec2& textureSize, float scale = 1, const Color& color = color::white) const {
             draw9Slice(glm::vec3(pos, 0), sliceSize, innerSize, minUV, textureSize, scale, color);
         }
 
         static const int panel_slice_size;
-        void drawPanel(const glm::vec3& pos, const glm::vec2& size);
-        inline void drawPanel(const glm::vec2& pos, const glm::vec2& size) {
+        void drawPanel(const glm::vec3& pos, const glm::vec2& size) const;
+        inline void drawPanel(const glm::vec2& pos, const glm::vec2& size) const {
             drawPanel(glm::vec3(pos, 0), size);
         }
 
-        // TODO: add tooltip rendering function(s)
+
+        static const int tooltip_slice_size;
+        static const float tooltip_font_size;
+        void drawTooltipBackground(const glm::vec3& pos, const glm::vec2& size) const;
+        void drawTooltip(const glm::vec3& pos, std::u32string_view tooltip) const;
+        inline void drawTooltip(const glm::vec3& pos, std::string_view tooltip) const { drawTooltip(pos, unicode::utf8ToUtf32(tooltip)); }
+        inline void drawTooltip(const glm::vec2& pos, std::u32string_view tooltip) const { drawTooltip(glm::vec3(pos, 0), tooltip); }
+        inline void drawTooltip(const glm::vec2& pos, std::string_view tooltip) const { drawTooltip(glm::vec3(pos, 0), unicode::utf8ToUtf32(tooltip)); }
+        void drawTooltip(std::u32string_view tooltip, float zIndex = 0) const;
+        inline void drawTooltip(std::string_view tooltip, float zIndex = 0) const { drawTooltip(unicode::utf8ToUtf32(tooltip), zIndex); }
 
 
+        void flushTextured() const;
 
     protected:
 

@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <array>
+#include <type_traits>
 
 namespace eng {
 
@@ -18,7 +19,7 @@ namespace eng {
 		// replaces invalid bytes/codepoints when converting between character encodings
 		template<typename C = char>
 		inline constexpr std::array<C, 3> replacement_character_utf8_bytes = { static_cast<C>(0xEF), static_cast<C>(0xBF), static_cast<C>(0xBD) }; // TODO: change to std::basic_string once it is constexpr_compliant
-		
+
 
 		enum class Utf8DecoderState : char32_t { accept = 0, reject = 12, };
 		constexpr Utf8DecoderState decodeUtf8(Utf8DecoderState& state, char32_t& codepoint, unsigned char byte) noexcept;
@@ -58,7 +59,7 @@ namespace eng {
 			return str8;
 		}
 
-		template <typename String8 = std::string>
+		template <typename String8 = std::string, std::enable_if_t<(std::is_same_v<String8, std::string> || std::is_same_v<String8, std::u8string>), int> = 0>
 		String8 utf32ToUtf8(std::u32string_view str32) {
 			String8 str8;
 			str8.reserve(str32.length());

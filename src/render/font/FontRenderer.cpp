@@ -2,6 +2,7 @@
 
 #include <span>
 #include <algorithm>
+#include <utility>
 #include <type_traits>
 
 #include "render/Renderer.h"
@@ -21,6 +22,7 @@ namespace eng {
 		fontShader.createUniform("textureSampler");
 		fontShader.createUniform("mvpMatrix");
 		underlineShader.createUniform("mvpMatrix");
+		highlightShader.createUniform("mvpMatrix");
 
 		// font VAO and VBO setup
 		fontVAO.bind(); // bind the block VAO
@@ -32,6 +34,11 @@ namespace eng {
 		underlineVBO.setData(nullptr, 0, VertexBuffer::DrawHint::STREAM);
 		underlineVBO.bind();
 		underlineVAO.setVertexFormat(ColorVert::format);
+		// highlight VAO and VBO setup
+		highlightVAO.bind();
+		highlightVBO.setData(nullptr, 0, VertexBuffer::DrawHint::STREAM);
+		highlightVBO.bind();
+		highlightVAO.setVertexFormat(ColorVert::format);
 	}
 
 
@@ -63,6 +70,26 @@ namespace eng {
 			//glDepthMask(GL_TRUE);
 
 			textVertBuffers.underlineBuffer.clear();
+		}
+		if (!textVertBuffers.highlightBuffer.empty()) {
+			highlightShader.bind();
+			highlightShader.setUniform("mvpMatrix", orthoMatrix);
+
+			glEnable(GL_CULL_FACE);
+			//glDepthMask(GL_FALSE);
+			glEnable(GL_DEPTH_TEST);
+			glEnable(GL_BLEND);
+			//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+
+			highlightVAO.bind();
+			highlightVBO.setData(std::span(textVertBuffers.highlightBuffer.data(), textVertBuffers.highlightBuffer.size()));
+			highlightVAO.draw(DrawMode::TRIANGLES, 0, textVertBuffers.highlightBuffer.size());
+
+			glDisable(GL_BLEND);
+			//glDepthMask(GL_TRUE);
+
+			textVertBuffers.highlightBuffer.clear();
 		}
 		if (!textVertBuffers.fontQuadBuffer.empty()) {
 			font.getTexture().bind();
@@ -139,22 +166,96 @@ namespace eng {
 	}
 
 
-	void FontRenderer::drawCursor(const glm::vec3& origin, float fontSize, const Color& color) {
-		const float scale = fontSize / (font.fontData.ascent - font.fontData.descent);
-		const float topY = ((font.fontData.lineGap * 0.125f) + font.fontData.ascent) * scale;
-		const float bottomY = ((font.fontData.lineGap * 0.875f) + font.fontData.descent) * scale;
-		textVertBuffers.underlineBuffer.emplace_back(glm::vec2(origin.x, topY), color);
-		textVertBuffers.underlineBuffer.emplace_back(glm::vec2(origin.x, bottomY), color);
+	static bool addGlyphQuadToBuffer(FontRenderer::FontQuadBuffer& buffer, const Glyph& glyph, const float scale, const glm::vec3& pos, const Color& color, const TextOutline& outline, const glm::vec2& xRange) noexcept {
+		const float& minX = xRange.x;
+		const float& maxX = xRange.y;
+		const bool doCutoff = minX != maxX;
+		const glm::vec2 glyphOffset = static_cast<glm::vec2>(glyph.offset) * scale;
+		const glm::vec3 gOrig { pos.x + glyphOffset.x, pos.y + glyphOffset.y, pos.z };
+		const glm::vec2 glyphSize = static_cast<glm::vec2>(glyph.sdfSize) * scale;
+		glm::vec3 minPos = gOrig;
+		glm::vec3 maxPos { gOrig.x + glyphSize.x, gOrig.y + glyphSize.y, gOrig.z };
+		if (doCutoff && ((maxPos.x < minX) || (minPos.x > maxX)))
+			return false;
+		glm::vec2 minUV = glyph.getMinUV();
+		glm::vec2 maxUV = glyph.getMaxUV();
+		if (doCutoff) {
+			const float uvWidth = maxUV.x - minUV.x;
+			if (minPos.x < minX) {
+				const float cutoffAmount = (minX - minPos.x) / glyphSize.x;
+				minPos.x = minX;
+				minUV.x += uvWidth * cutoffAmount;
+			}
+			if (maxPos.x > maxX) {
+				const float cutoffAmount = (maxPos.x - maxX) / glyphSize.x;
+				maxPos.x = maxX;
+				maxUV.x -= uvWidth * cutoffAmount;
+			}
+		}
+		buffer.emplace_back(
+			FontVert { minPos, minUV },
+			FontVert { { minPos.x, maxPos.y, minPos.z }, { minUV.x, maxUV.y } },
+			FontVert { { maxPos.x, minPos.y, maxPos.z }, { maxUV.x, minUV.y } },
+			FontVert { maxPos, maxUV },
+			color, outline.color, outline.size, outline.spread
+		);
+		return true;
+	}
+	static bool addSlantedGlyphQuadToBuffer(FontRenderer::FontQuadBuffer& buffer, const Glyph& glyph, const float scale, const glm::vec3& pos, const Color& color, const TextOutline& outline, const float slant, const glm::vec2& xRange) noexcept {
+		const float& minX = xRange.x;
+		const float& maxX = xRange.y;
+		const bool doCutoff = minX != maxX;
+		const glm::vec2 glyphOffset = static_cast<glm::vec2>(glyph.offset) * scale;
+		const glm::vec3 gOrig { pos.x + glyphOffset.x, pos.y + glyphOffset.y, pos.z };
+		const glm::vec2 glyphSize = static_cast<glm::vec2>(glyph.sdfSize) * scale;
+		const glm::vec3 minPos = gOrig;
+		const glm::vec3 maxPos { gOrig.x + glyphSize.x, gOrig.y + glyphSize.y, gOrig.z };
+		if (doCutoff && (((maxPos.x + slant) < minX) || ((minPos.x - slant) > maxX)))
+			return false;
+		const glm::vec2 minUV = glyph.getMinUV();
+		const glm::vec2 maxUV = glyph.getMaxUV();
+		FontVert v0 { { minPos.x + slant, minPos.y, minPos.z }, minUV };
+		FontVert v1 { { minPos.x - slant, maxPos.y, minPos.z }, { minUV.x, maxUV.y } };
+		FontVert v2 { { maxPos.x + slant, minPos.y, minPos.z }, { maxUV.x, minUV.y } };
+		FontVert v3 { { maxPos.x - slant, maxPos.y, minPos.z }, maxUV };
+		if (doCutoff) {
+			const float uvWidth = maxUV.x - minUV.x;
+			if (v0.pos.x < minX) {
+				const float cutoffAmount = (minX - v0.pos.x) / glyphSize.x;
+				v0.pos.x = minX;
+				v0.texCoord.x += uvWidth * cutoffAmount;
+			}
+			if (v1.pos.x < minX) {
+				const float cutoffAmount = (minX - v1.pos.x) / glyphSize.x;
+				v1.pos.x = minX;
+				v1.texCoord.x += uvWidth * cutoffAmount;
+			}
+			if (v2.pos.x > maxX) {
+				const float cutoffAmount = (v2.pos.x - maxX) / glyphSize.x;
+				v2.pos.x = maxX;
+				v2.texCoord.x -= uvWidth * cutoffAmount;
+			}
+			if (v3.pos.x > maxX) {
+				const float cutoffAmount = (v3.pos.x - maxX) / glyphSize.x;
+				v3.pos.x = maxX;
+				v3.texCoord.x -= uvWidth * cutoffAmount;
+			}
+		}
+		buffer.emplace_back(v0, v1, v2, v3, color, outline.color, outline.size, outline.spread);
+		return true;
 	}
 
-
-	float FontRenderer::drawTextToBuffer(TextVertexBuffers& textBuffers, std::u32string_view text, const glm::vec3& origin, float fontSize, const Color& color, const TextOutline& outline, const bool underline) const {
+	float FontRenderer::drawTextToBuffer(TextVertexBuffers& textBuffers, std::u32string_view text, const glm::vec3& origin, float fontSize, const Color& color, const TextOutline& outline, const bool underline, float maxWidth, float xOffset) const {
 		const float scale = fontSize / (font.fontData.ascent - font.fontData.descent);
 		const float unscaledBaselineOffset = (font.fontData.lineGap * 0.5f) + font.fontData.ascent; // unscaled distance from top of a line of text to the baseline
 		const float baselineOffset = unscaledBaselineOffset * scale; // distance from top of a line of text to the baseline
 
+		const float minX = origin.x;
+		const float maxX = origin.x + maxWidth;
+		const glm::vec2 xRange { minX, maxX };
+
 		float width = 0;
-		glm::vec3 pos { origin.x, origin.y + baselineOffset, origin.z };
+		glm::vec3 pos { origin.x + xOffset, origin.y + baselineOffset, origin.z };
 		const Glyph* prevGlyph = nullptr;
 		for (const auto& codepoint : text) {
 			const Glyph& glyph = font.getGlyph(codepoint);
@@ -164,31 +265,12 @@ namespace eng {
 				width += kern;
 			}
 
-			const glm::vec3 gOrig = pos + glm::vec3(static_cast<glm::vec2>(glyph.offset) * scale, 0);
-			const glm::vec2 glyphSize = static_cast<glm::vec2>(glyph.sdfSize) * scale;
-
-			const glm::vec2 uvMin = glyph.getMinUV();
-			const glm::vec2 uvMax = glyph.getMaxUV();
-
 			// TODO: add a way to draw bold text
 			// italicized font rendering
 			//constexpr float slant = 0.15f; // amount to offset the x coordinates of the font quad based on the font size
-			//const float slantOffset = slant * fontSize;
-			//quadBuffer.emplace_back(
-			//	FontVert { { gOrig.x + slantOffset, gOrig.y, gOrig.z }, uvMin },
-			//	FontVert { { gOrig.x - slantOffset, gOrig.y + glyphSize.y, gOrig.z }, { uvMin.x, uvMax.y } },
-			//	FontVert { { gOrig.x + slantOffset + glyphSize.x, gOrig.y, gOrig.z }, { uvMax.x, uvMin.y } },
-			//	FontVert { { gOrig.x - slantOffset + glyphSize.x, gOrig.y + glyphSize.y, gOrig.z }, uvMax },
-			//	color, outline.color, outline.size, outline.spread
-			//);
+			//addSlantedGlyphQuadToBuffer(textBuffers.fontQuadBuffer, glyph, scale, pos, color, outline, slant * fontSize, xRange);
 			// regular font rendering
-			textBuffers.fontQuadBuffer.emplace_back(
-				FontVert { gOrig, uvMin },
-				FontVert { { gOrig.x, gOrig.y + glyphSize.y, gOrig.z }, { uvMin.x, uvMax.y } },
-				FontVert { { gOrig.x + glyphSize.x, gOrig.y, gOrig.z }, { uvMax.x, uvMin.y } },
-				FontVert { { gOrig.x + glyphSize.x, gOrig.y + glyphSize.y, gOrig.z }, uvMax },
-				color, outline.color, outline.size, outline.spread
-			);
+			addGlyphQuadToBuffer(textBuffers.fontQuadBuffer, glyph, scale, pos, color, outline, xRange);
 
 			const float xAdv = glyph.xAdvance * scale;
 			pos.x += xAdv;
@@ -199,11 +281,87 @@ namespace eng {
 		if (underline) {
 			const float underlineOffset = (unscaledBaselineOffset - (1.0f * font.fontData.descent)) * scale; // distance from the top of a line to the underline
 			const float ulY = origin.y + underlineOffset;
-			textBuffers.underlineBuffer.emplace_back(glm::vec3(origin.x, ulY, origin.z), color);
-			textBuffers.underlineBuffer.emplace_back(glm::vec3(origin.x + width, ulY, origin.z), color);
+			const float ulMinX = vmax(origin.x + xOffset, minX);
+			const float ulMaxX = vmin(origin.x + xOffset + width, maxX);
+			textBuffers.underlineBuffer.emplace_back(glm::vec3(ulMinX, ulY, origin.z), color);
+			textBuffers.underlineBuffer.emplace_back(glm::vec3(ulMaxX, ulY, origin.z), color);
 		}
 
 		return width;
+	}
+
+	EditableTextRenderResult FontRenderer::drawEditableTextToBuffer(TextVertexBuffers& textBuffers, std::u32string_view text, const std::pair<size_t, size_t>& cursorPos, const bool drawCursor, const glm::vec3& origin, float fontSize, const Color& color, const TextOutline& outline, const Color& cursorColor, const Color& highlightColor, const Color& highlightedTextColor, const TextOutline& highlightedOutline, float maxWidth, float xOffset) const {
+		const float scale = fontSize / (font.fontData.ascent - font.fontData.descent);
+		const float unscaledBaselineOffset = (font.fontData.lineGap * 0.5f) + font.fontData.ascent; // unscaled distance from top of a line of text to the baseline
+		const float baselineOffset = unscaledBaselineOffset * scale; // distance from top of a line of text to the baseline
+		const bool hasHighlight = (cursorPos.first != cursorPos.second);
+		const size_t selectionStart = vmin(cursorPos.first, cursorPos.second);
+		const size_t selectionEnd = vmax(cursorPos.first, cursorPos.second);
+
+		const float minX = origin.x;
+		const float maxX = origin.x + maxWidth;
+		const glm::vec2 xRange { minX, maxX };
+
+		float cursorX = origin.x + xOffset;
+		float highlightStartX = origin.x + xOffset, highlightEndX = origin.x + xOffset;
+		float width = 0;
+		glm::vec3 pos { origin.x + xOffset, origin.y + baselineOffset, origin.z };
+		const Glyph* prevGlyph = nullptr;
+		for (size_t i = 0; i < text.size(); i++) {
+			const auto& codepoint = text[i];
+			const Glyph& glyph = font.getGlyph(codepoint);
+			if (prevGlyph) {
+				const float kern = font.getKernAdvance(*prevGlyph, glyph) * scale;
+				pos.x += kern; // apply kerning
+				width += kern;
+			}
+			if (i == cursorPos.second) {
+				cursorX = pos.x;
+			}
+			if (i == selectionStart) {
+				highlightStartX = pos.x;
+			} else if (i == selectionEnd) {
+				highlightEndX = pos.x;
+			}
+			const bool highlighted = (i >= selectionStart) && (i < selectionEnd);
+
+			const Color& glyphColor = highlighted ? highlightedTextColor : color;
+			addGlyphQuadToBuffer(textBuffers.fontQuadBuffer, glyph, scale, pos, glyphColor, outline, xRange);
+
+			const float xAdv = glyph.xAdvance * scale;
+			pos.x += xAdv;
+			width += xAdv;
+
+			prevGlyph = &glyph;
+		}
+		const float cursorTopY = origin.y + ((font.fontData.lineGap * 0.25f) * scale);
+		const float cursorBottomY = origin.y + ((font.fontData.lineHeight - (font.fontData.lineGap * 0.25f)) * scale);
+		if (cursorPos.second == text.size()) cursorX = origin.x + xOffset + width;
+		if (hasHighlight) {
+			if (selectionEnd == text.size()) {
+				highlightEndX = origin.x + xOffset + width;
+			}
+			highlightStartX = vmax(highlightStartX, minX);
+			highlightEndX = vmin(highlightEndX, maxX);
+			if (highlightStartX < highlightEndX) {
+				textBuffers.highlightBuffer.insert(textBuffers.highlightBuffer.end(), {
+					{ glm::vec3(highlightStartX, cursorTopY, origin.z), highlightColor },
+					{ glm::vec3(highlightStartX, cursorBottomY, origin.z), highlightColor },
+					{ glm::vec3(highlightEndX, cursorTopY, origin.z), highlightColor },
+					{ glm::vec3(highlightEndX, cursorTopY, origin.z), highlightColor },
+					{ glm::vec3(highlightStartX, cursorBottomY, origin.z), highlightColor },
+					{ glm::vec3(highlightEndX, cursorBottomY, origin.z), highlightColor },
+				});
+			}
+		}
+		if (drawCursor) {
+			if ((cursorX >= minX) && (cursorX <= maxX)) {
+				textBuffers.underlineBuffer.emplace_back(glm::vec3(cursorX, cursorTopY, origin.z), cursorColor);
+				textBuffers.underlineBuffer.emplace_back(glm::vec3(cursorX, cursorBottomY, origin.z), cursorColor);
+			}
+		}
+
+		return { width, cursorX - (origin.x + xOffset) };
 	}
 
 
@@ -400,7 +558,8 @@ namespace eng {
 					pos.x += kern; // apply kerning
 				}
 
-				const glm::vec3 gOrig = pos + glm::vec3(static_cast<glm::vec2>(glyph.offset) * scale, 0);
+				const glm::vec2 glyphOffset = static_cast<glm::vec2>(glyph.offset) * scale;
+				const glm::vec3 gOrig { pos.x + glyphOffset.x, pos.y + glyphOffset.y, pos.z };
 				const glm::vec2 glyphSize = static_cast<glm::vec2>(glyph.sdfSize) * scale;
 
 				const glm::vec2 uvMin = glyph.getMinUV();

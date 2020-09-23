@@ -22,10 +22,11 @@ namespace jonk {
 				using namespace eng::input;
 				JonkObject keyBindsObj {};
 				forEachKeyBind([&](KeyBind& keyBind) {
-					if (const auto binding = keyBind.getBoundKeyInput(); binding) {
-						keyBindsObj.emplace(keyBind.name, *binding);
-					} else {
-						keyBindsObj.emplace(keyBind.name, nullptr);
+					if (keyBind.rebindable) {
+						if (const auto binding = keyBind.getBoundKeyInput(); binding)
+							keyBindsObj.emplace(keyBind.name, *binding);
+						else
+							keyBindsObj.emplace(keyBind.name, nullptr);
 					}
 				});
 				jonkObj.emplace("keybinds", std::move(keyBindsObj));

@@ -11,8 +11,9 @@ namespace eng {
     bool GuiComponent::isFocused() const noexcept {
         return gui->getFocusedComponent() == this;
     }
-    bool GuiComponent::isHovered() const noexcept {
-        return boundingRect.contains(gui->getMousePos());
+    bool GuiComponent::isMouseOver() const noexcept {
+        return visible && (!containerRect || containerRect->intersects(boundingRect)) &&
+               boundingRect.contains(gui->getMousePos());
     }
 
 

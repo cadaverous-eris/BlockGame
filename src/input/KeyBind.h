@@ -18,6 +18,8 @@ namespace eng::input {
 	// owns all KeyBind instances
 	extern std::vector<std::unique_ptr<KeyBind>> keyBindList;
 
+	// list of all rebindable KeyBinds
+	extern std::vector<KeyBind*> rebindableKeyBinds;
 
 	namespace keybinds {
 		// movement keys
@@ -43,6 +45,7 @@ namespace eng::input {
 
 	KeyBind* makeKeyBind(std::string&&, KeyInput&&);
 	KeyBind* makeKeyBind(std::string&&);
+	KeyBind* makeNonRebindableKeyBind(std::string&& name, KeyInput&& keyInput);
 	void bind(KeyBind&, const KeyInput&);
 	void unbind(KeyBind&);
 	KeyBind* findKeyBind(const KeyInput&);
@@ -56,10 +59,12 @@ namespace eng::input {
 	void key_callback(GLFWwindow*, int32_t, int32_t, int32_t, int32_t);
 	void mouse_button_callback(GLFWwindow*, int32_t, int32_t, int32_t);
 
+	std::unique_ptr<KeyBind> makeKeyBindPtr(std::string&&, KeyInput&&, bool);
 	std::unique_ptr<KeyBind> makeKeyBindPtr(std::string&&, KeyInput&&);
 	std::unique_ptr<KeyBind> makeKeyBindPtr(std::string&&);
 
 	class KeyBind {
+		friend std::unique_ptr<KeyBind> makeKeyBindPtr(std::string&&, KeyInput&&, bool);
 		friend std::unique_ptr<KeyBind> makeKeyBindPtr(std::string&&, KeyInput&&);
 		friend std::unique_ptr<KeyBind> makeKeyBindPtr(std::string&&);
 		friend void bind(KeyBind&, const KeyInput&);
@@ -72,18 +77,19 @@ namespace eng::input {
 	public:
 		const std::string name;
 		const std::optional<KeyInput> defaultKeyInput;
-
 	private:
 		std::optional<KeyInput> keyInput;
 
-		bool pressed = false, prevPressed = false;
-		bool released = false;
-
 		std::vector<std::pair<size_t, std::function<void(const KeyInput&)>>> pressHandlers, releaseHandlers;
-
 		size_t pressHandlerId = 1, releaseHandlerId = 1;
 
-		explicit KeyBind(std::string&& name, KeyInput&& defaultKeyInput);
+		bool pressed = false, prevPressed = false;
+		bool released = false;
+	public:
+		const bool rebindable = true;
+
+	private:
+		explicit KeyBind(std::string&& name, KeyInput&& defaultKeyInput, bool rebindable = true);
 		explicit KeyBind(std::string&& name);
 	public:
 		~KeyBind() = default;
@@ -125,6 +131,8 @@ namespace eng::input {
 		}
 		void removePressHandler(size_t handle) noexcept;
 		void removeReleaseHandler(size_t handle) noexcept;
+
+		bool matchesKeyInput(const KeyInput& keyInput) const noexcept;
 
 	private:
 		void handlePress(const KeyInput& input, bool callListeners = true);

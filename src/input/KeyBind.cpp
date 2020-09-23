@@ -12,9 +12,11 @@ namespace eng::input {
 	// owns all KeyBind instances
 	std::vector<std::unique_ptr<KeyBind>> keyBindList {};
 	// maps of keys to vectors of bound keybinds
-	std::array<std::unordered_map<int, std::vector<KeyBind*>>, 3/*1 for each KeyType*/> bindingMaps;
+	static std::array<std::unordered_map<int, std::vector<KeyBind*>>, 3/* 1 for each KeyType */> bindingMaps;
 	// map of KeyBind names to KeyBind*s
-	std::map<std::string, KeyBind*> keyBindsNameMap {};
+	static std::map<std::string, KeyBind*> keyBindsNameMap {};
+	// list of all rebindable KeyBinds
+	std::vector<KeyBind*> rebindableKeyBinds {};
 
 	namespace keybinds {
 		// movement keys
@@ -37,26 +39,29 @@ namespace eng::input {
 		KeyBind* const DEBUG_BREAK_FLUID = makeKeyBind("break_fluid", { Keys::KEY_G });
 	}
 
+	static KeyBind* initKeyBind(KeyBind* keyBind) {
+		assert(!keyBind->name.empty());
+		const auto mapEmplaceResult = keyBindsNameMap.try_emplace(keyBind->name, keyBind);
+		[[maybe_unused]] const auto duplicateKeyBindName = !mapEmplaceResult.second;
+		assert(!duplicateKeyBindName);
+		if (keyBind->rebindable) rebindableKeyBinds.push_back(keyBind);
+		resetBinding(*keyBind);
+		return keyBind;
+	}
 
 	KeyBind* makeKeyBind(std::string&& name, KeyInput&& defaultKeyInput) {
-		assert(!name.empty());
-		auto keyBind = keyBindList.emplace_back(makeKeyBindPtr(std::move(name), std::move(defaultKeyInput))).get();
-		const auto mapEmplaceResult = keyBindsNameMap.try_emplace(keyBind->name, keyBind);
-		const auto duplicateKeyBindName = !mapEmplaceResult.second;
-		assert(!duplicateKeyBindName);
-		resetBinding(*keyBind);
-		return keyBind;
+		return initKeyBind(keyBindList.emplace_back(makeKeyBindPtr(std::move(name), std::move(defaultKeyInput))).get());
 	}
 	KeyBind* makeKeyBind(std::string&& name) {
-		assert(!name.empty());
-		auto keyBind = keyBindList.emplace_back(makeKeyBindPtr(std::move(name))).get();
-		const auto mapEmplaceResult = keyBindsNameMap.try_emplace(keyBind->name, keyBind);
-		const auto duplicateKeyBindName = !mapEmplaceResult.second;
-		assert(!duplicateKeyBindName);
-		resetBinding(*keyBind);
-		return keyBind;
+		return initKeyBind(keyBindList.emplace_back(makeKeyBindPtr(std::move(name))).get());
+	}
+	KeyBind* makeNonRebindableKeyBind(std::string&& name, KeyInput&& keyInput) {
+		return initKeyBind(keyBindList.emplace_back(makeKeyBindPtr(std::move(name), std::move(keyInput), false)).get());
 	}
 
+	std::unique_ptr<KeyBind> makeKeyBindPtr(std::string&& name, KeyInput&& defaultKeyInput, bool rebindable) {
+		return std::unique_ptr<KeyBind>(new KeyBind(std::move(name), std::move(defaultKeyInput), rebindable));
+	}
 	std::unique_ptr<KeyBind> makeKeyBindPtr(std::string&& name, KeyInput&& defaultKeyInput) {
 		return std::unique_ptr<KeyBind>(new KeyBind(std::move(name), std::move(defaultKeyInput)));
 	}
@@ -65,7 +70,7 @@ namespace eng::input {
 	}
 
 
-	KeyBind::KeyBind(std::string&& name, KeyInput&& defaultKeyInput) : name(std::move(name)), defaultKeyInput(std::move(defaultKeyInput)) {}
+	KeyBind::KeyBind(std::string&& name, KeyInput&& defaultKeyInput, bool rebindable) : name(std::move(name)), defaultKeyInput(std::move(defaultKeyInput)), rebindable(rebindable) {}
 	KeyBind::KeyBind(std::string&& name) : name(std::move(name)) {}
 
 	void KeyBind::handleInput() {
@@ -100,12 +105,15 @@ namespace eng::input {
 			pressHandlers.end()
 		);
 	}
-
 	void KeyBind::removeReleaseHandler(size_t handlerId) noexcept {
 		releaseHandlers.erase(
 			std::remove_if(releaseHandlers.begin(), releaseHandlers.end(), [&](const auto& cbPair) noexcept { return handlerId == cbPair.first; }),
 			releaseHandlers.end()
 		);
+	}
+
+	bool KeyBind::matchesKeyInput(const KeyInput& keyInput) const noexcept {
+		return this->keyInput && (this->keyInput->key == keyInput.key) && keyInput.modifiers[this->keyInput->modifiers];
 	}
 
 
@@ -179,21 +187,18 @@ namespace eng::input {
 	}
 
 	void resetBinding(KeyBind& keyBind) {
-		if (keyBind.defaultKeyInput) {
+		if (keyBind.defaultKeyInput)
 			bind(keyBind, *keyBind.defaultKeyInput);
-		}
 	}
 
 	void handleKeyBindingsInput() {
-		for (auto& keyBind : keyBindList) {
+		for (auto& keyBind : keyBindList)
 			keyBind->handleInput();
-		}
 	}
 
 	void resetKeyBindStates() {
-		for (auto& keyBind : keyBindList) {
+		for (auto& keyBind : keyBindList)
 			keyBind->resetState();
-		}
 	}
 
 	bool isConflict(const KeyBind& a, const KeyBind& b) {

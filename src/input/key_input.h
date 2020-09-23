@@ -189,9 +189,10 @@ namespace eng::input {
 		};
 	public:
 		static const ModifierBits NONE, SHIFT, CONTROL, ALT, SUPER, CAPS_LOCK, NUM_LOCK;
+		static const ModifierBits KEY_COMMAND_MODIFIER; // SUPER on MacOS, CONTROL everywhere else
 
 	private:
-		uint8_t bits; // TODO: use a bitfield
+		uint8_t bits : 6;
 
 		constexpr explicit ModifierBits(uint8_t bits) noexcept : bits(bits & 0b00111111) {}
 
@@ -207,26 +208,26 @@ namespace eng::input {
 			return (((b + (b >> 4)) & 0b1111) * 0b0001);
 		}
 
-		constexpr inline operator bool() const noexcept { return (bits & 0b00111111) > 0; }
+		constexpr inline operator bool() const noexcept { return bits > 0; }
 
 		constexpr ModifierBits operator |(const ModifierBits& rhs) const noexcept { return ModifierBits(bits | rhs.bits); }
 		constexpr ModifierBits operator &(const ModifierBits& rhs) const noexcept { return ModifierBits(bits & rhs.bits); }
 		constexpr ModifierBits operator ^(const ModifierBits& rhs) const noexcept { return ModifierBits(bits ^ rhs.bits); }
 		constexpr ModifierBits operator ~() const noexcept { return ModifierBits(~bits); }
 		ModifierBits& operator |=(const ModifierBits& rhs) noexcept {
-			bits = (bits | rhs.bits) & 0b00111111;
+			bits |= rhs.bits;
 			return *this;
 		}
 		ModifierBits& operator &=(const ModifierBits& rhs) noexcept {
-			bits = (bits & rhs.bits) & 0b00111111;
+			bits &= rhs.bits;
 			return *this;
 		}
 		ModifierBits& operator ^=(const ModifierBits& rhs) noexcept {
-			bits = (bits ^ rhs.bits) & 0b00111111;
+			bits ^= rhs.bits;
 			return *this;
 		}
-		constexpr bool operator ==(const ModifierBits& rhs) const noexcept { return (bits & 0b00111111) == (rhs.bits & 0b00111111); }
-		constexpr bool operator !=(const ModifierBits& rhs) const noexcept { return (bits & 0b00111111) != (rhs.bits & 0b00111111); }
+		constexpr bool operator ==(const ModifierBits& rhs) const noexcept { return bits == rhs.bits; }
+		constexpr bool operator !=(const ModifierBits& rhs) const noexcept { return bits != rhs.bits; }
 		constexpr bool operator <(const ModifierBits& rhs) const noexcept {
 			if ((*this) == rhs) return false;
 			const auto countDif = static_cast<int>(count()) - static_cast<int>(rhs.count()); // < 0 if this has fewer active bits than rhs
@@ -269,6 +270,12 @@ namespace eng::input {
 	inline constexpr const ModifierBits ModifierBits::SUPER { GLFW_MOD_SUPER };
 	inline constexpr const ModifierBits ModifierBits::CAPS_LOCK { GLFW_MOD_CAPS_LOCK };
 	inline constexpr const ModifierBits ModifierBits::NUM_LOCK { GLFW_MOD_NUM_LOCK };
+
+#ifdef __APPLE__
+	inline constexpr const ModifierBits ModifierBits::KEY_COMMAND_MODIFIER { GLFW_MOD_SUPER };
+#else
+	inline constexpr const ModifierBits ModifierBits::KEY_COMMAND_MODIFIER { GLFW_MOD_CONTROL };
+#endif
 
 	// a key (named or unnamed) or mouse button
 	struct Key {

@@ -85,8 +85,7 @@ namespace eng {
 
         void updateThumbPos() {
             const float thumbPosRange = boundingRect.size.x - thumbSize.x;
-            float newVal = (gui->getMousePos().x - (thumbSize.x / 2.0f) - boundingRect.offset.x) / thumbPosRange;
-            newVal = glm::clamp(newVal, 0.0f, 1.0f);
+            const float newVal = clampFloatValue((gui->getMousePos().x - (thumbSize.x / 2.0f) - boundingRect.offset.x) / thumbPosRange);
             const bool moved = newVal != floatVal;
             floatVal = newVal;
             if (moved) onDrag();

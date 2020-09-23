@@ -40,28 +40,21 @@ namespace eng {
 		}
 		if (settingsJonk.isObject()) {
 			JonkObject& settingsObj = settingsJonk.asObject();
-			if (settingsObj.hasKey<int16_t>("chunk_load_radius")) {
-				settings.chunkLoadRadius = settingsObj.get<int16_t>("chunk_load_radius");
-				settings.chunkLoadRadius = std::clamp(settings.chunkLoadRadius, Settings::min_chunk_load_radius, Settings::max_chunk_load_radius);
-			}
-			if (settingsObj.hasKey<int32_t>("ui_scale")) {
-				settings.uiScale = std::clamp(settingsObj.get<int32_t>("ui_scale"), Settings::min_ui_scale, Settings::max_ui_scale);
-			}
-			if (settingsObj.hasKey<glm::i16vec2>("window_size")) {
-				settings.windowSize = settingsObj.get<glm::i16vec2>("window_size");
-				if (settings.windowSize.x < min_window_size.x) settings.windowSize.x = min_window_size.x;
-				if (settings.windowSize.y < min_window_size.y) settings.windowSize.y = min_window_size.y;
-			}
+			if (const auto chunkLoadRad = settingsObj.getOptional<int16_t>("chunk_load_radius"); chunkLoadRad)
+				settings.chunkLoadRadius = std::clamp(*chunkLoadRad, min_chunk_load_radius, max_chunk_load_radius);
+			if (const auto uiScale = settingsObj.getOptional<int32_t>("ui_scale"); uiScale)
+				settings.uiScale = std::clamp(*uiScale, min_ui_scale, max_ui_scale);
+			if (const auto windowSize = settingsObj.getOptional<glm::i16vec2>("window_size"); windowSize)
+				settings.windowSize = glm::max(*windowSize, min_window_size);
 			if (settingsObj.hasKey<Object>("keybinds")) {
 				using namespace eng::input;
 				JonkObject& keyBindsObj = settingsObj.at<Object>("keybinds");
-				for (const auto& [keyBindName, keyInput] : keyBindsObj) {
-					if (auto keyBind = findKeyBind(keyBindName); keyBind) {
-						if (keyInput.is<KeyInput>()) {
-							bind(*keyBind, keyInput.get<KeyInput>());
-						} else if (keyInput.isNull()) {
+				for (const auto& [keyBindName, keyInputConf] : keyBindsObj) {
+					if (auto keyBind = findKeyBind(keyBindName); keyBind && keyBind->rebindable) {
+						if (const auto keyInput = keyInputConf.getOptional<KeyInput>(); keyInput)
+							bind(*keyBind, *keyInput);
+						else if (keyInputConf.isNull())
 							unbind(*keyBind);
-						}
 					}
 				}
 			}
