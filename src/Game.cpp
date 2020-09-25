@@ -45,7 +45,7 @@ namespace eng {
 			window(this, settings.windowSize.x, settings.windowSize.y, ""),
 			renderer(&window),
 			inputManager(&window),
-			name(names[RNG().nextUint32(names.size())]) {
+			name(names[RNG().nextUint32(static_cast<uint32_t>(names.size()))]) {
 		if (Game::gameInstance) {
 			throw std::runtime_error("Game already created");
 		}
@@ -177,7 +177,7 @@ namespace eng {
 		inputManager.input(); // Poll for and process input events
 
 		const bool hasOpenGui = static_cast<bool>(activeGui);
-		if (activeGui)
+		if (hasOpenGui)
 			activeGui->handleInput();
 		else
 			doGameStateInput(currentGameState);
