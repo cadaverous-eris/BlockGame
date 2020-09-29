@@ -17,6 +17,7 @@ in GS_IN {
 flat out vec3 normal;
 out vec2 texCoord;
 flat out vec3 color;
+out float cameraDistance;
 
 uniform mat4 modelMatrix;
 uniform mat4 viewMatrix;
@@ -62,21 +63,25 @@ void main() {
 	gl_Position = pos1;
 	normal = normal1;
 	texCoord = uv1;
+	cameraDistance = length(pos1);
 	EmitVertex();
 	// vertex 2
 	gl_Position = pos2;
 	normal = normal2;
 	texCoord = uv2;
+	cameraDistance = length(pos2);
 	EmitVertex();
 	// vertex 3
 	gl_Position = pos3;
 	normal = normal1;
 	texCoord = uv3;
+	cameraDistance = length(pos3);
 	EmitVertex();
 	// vertex 4
 	gl_Position = pos4;
 	normal = normal2;
 	texCoord = uv4;
+	cameraDistance = length(pos4);
 	EmitVertex();
 
 	EndPrimitive();

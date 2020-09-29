@@ -72,16 +72,20 @@ namespace eng {
 
 	private:
 		NoiseGen terrainGenNoise;
-	public:
 		static inline int loading_dist {};
 		static inline int loading_dist_sqr {};
 		static inline int unloading_dist {};
 		static inline int unloading_dist_sqr {};
+	public:
 		static void setChunkLoadRadius(const int loadRadius) noexcept;
+		static inline int getChunkLoadingDist() noexcept { return loading_dist; }
+		static inline int getChunkLoadingDistSquared() noexcept { return loading_dist_sqr; }
+		static inline int getChunkUnloadingDist() noexcept { return unloading_dist; }
+		static inline int getChunkUnloadingDistSquared() noexcept { return unloading_dist_sqr; }
 
 		static size_t maxChunkLoads; // maximum number of chunks to load per tick
 
-		
+
 		World(RNG::seed_t seed = RNG::randomSeed());
 		World(std::string_view seed) : World(RNG::toSeed(seed)) {}
 

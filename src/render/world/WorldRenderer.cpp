@@ -74,6 +74,8 @@ namespace eng {
 			shader.createUniform("modelMatrix");
 			shader.createUniform("viewMatrix");
 			shader.createUniform("projectionMatrix");
+			shader.createUniform("viewDistance");
+			shader.createUniform("fogColor");
 			if (transparent) {
 				shader.createUniform("opaqueColorTexSampler");
 			}
@@ -161,7 +163,7 @@ namespace eng {
 		worldFBODepthStencilAttachment = RenderBuffer(TextureInternalFormat::DEPTH_U24_STENCIL_U8, width, height);
 		//worldFBO.attachTexture(FrameBuffer::Target::DRAW_FRAMEBUFFER, FrameBuffer::Attachment::COLOR_0, &worldFBOColorAttachment);
 		worldFBO.attachRenderBuffer(FrameBuffer::Target::DRAW_FRAMEBUFFER, FrameBuffer::Attachment::DEPTH_STENCIL, &worldFBODepthStencilAttachment);
-		
+
 		// setup transparency framebuffer
 		transparentsFBO.bind(FrameBuffer::Target::DRAW_FRAMEBUFFER);
 		transparentsAccumTex.setData(nullptr, width, height, TextureInternalFormat::FLOAT16x4, TextureFormat::RGBA, TextureDataType::FLOAT32);
@@ -194,18 +196,26 @@ namespace eng {
 			glDisable(GL_CULL_FACE);
 			glDisable(GL_BLEND);
 		};
-		
+
 		// clear the buffers
 		for (auto layer : render_layer::layers) {
 			const size_t layerIndex = render_layer::getIndex(layer);
 			blockQuads[layerIndex].clear();
 		}
 
+		//constexpr Color skyColor = 0x81EBE7_c; // blue
+		constexpr Color skyColor = 0xF4BCEE_c; // pink 1
+		//constexpr Color skyColor = 0xFF88B5_c; // pink 2
+
 		const glm::mat4 worldMatrix = glm::mat4(1.0f);//glm::translate(worldMatrix, glm::vec3(-0.5f, -0.5f, -0.5f));
 		const auto& viewMatrix = camera->getViewMatrix(partialTicks);
 		const auto& projectionMatrix = renderer->getProjectionMatrix();
 
 		const auto mvpMatrix = projectionMatrix * viewMatrix * worldMatrix;
+
+		const auto viewDist = static_cast<float>(World::getChunkLoadingDist() - 28);
+
+		const glm::vec3 fogColor = static_cast<glm::vec3>(skyColor);
 
 		//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
@@ -215,15 +225,13 @@ namespace eng {
 
 		Renderer::setActiveTextureUnit(0);
 		ResourceManager::instance().getBlockTextures().bindTexture();
-		
+
 
 		Renderer::setActiveTextureUnit(1);
 		Texture::bind(worldFBOColorAttachment); // bind the main fbo color attachment texture
 
 		worldFBO.bind(FrameBufferTarget::DRAW_FRAMEBUFFER);
-		//Renderer::setClearColor(0x81EBE7_c); // blue
-		Renderer::setClearColor(0xF4BCEE_c); // pink 1
-		//Renderer::setClearColor(0xFF88B5_c); // pink 2
+		Renderer::setClearColor(skyColor);
 		Renderer::clear(Renderer::ClearBit::COLOR | Renderer::ClearBit::DEPTH | Renderer::ClearBit::STENCIL);
 
 		preSolidLayerRender();
@@ -232,11 +240,15 @@ namespace eng {
 		blockShaders[opaqueIndex].setUniform("textureSampler", 0);
 		blockShaders[opaqueIndex].setUniform("viewMatrix", viewMatrix);
 		blockShaders[opaqueIndex].setUniform("projectionMatrix", projectionMatrix);
+		blockShaders[opaqueIndex].setUniform("viewDistance", viewDist);
+		blockShaders[opaqueIndex].setUniform("fogColor", fogColor);
 
 		blockShaders[cutoutIndex].bind();
 		blockShaders[cutoutIndex].setUniform("textureSampler", 0);
 		blockShaders[cutoutIndex].setUniform("viewMatrix", viewMatrix);
 		blockShaders[cutoutIndex].setUniform("projectionMatrix", projectionMatrix);
+		blockShaders[cutoutIndex].setUniform("viewDistance", viewDist);
+		blockShaders[cutoutIndex].setUniform("fogColor", fogColor);
 
 		// render chunks
 		for (const auto chunk : renderableChunks) {
@@ -300,6 +312,8 @@ namespace eng {
 		blockShaders[transparentIndex].setUniform("opaqueColorTexSampler", 1);
 		blockShaders[transparentIndex].setUniform("viewMatrix", viewMatrix);
 		blockShaders[transparentIndex].setUniform("projectionMatrix", projectionMatrix);
+		blockShaders[transparentIndex].setUniform("viewDistance", viewDist);
+		blockShaders[transparentIndex].setUniform("fogColor", fogColor);
 
 		if (useFallbackTransparency) {
 			transparentsFallbackRevealageShader.bind();
@@ -307,6 +321,8 @@ namespace eng {
 			transparentsFallbackRevealageShader.setUniform("opaqueColorTexSampler", 1);
 			transparentsFallbackRevealageShader.setUniform("viewMatrix", viewMatrix);
 			transparentsFallbackRevealageShader.setUniform("projectionMatrix", projectionMatrix);
+			transparentsFallbackRevealageShader.setUniform("viewDistance", viewDist);
+			transparentsFallbackRevealageShader.setUniform("fogColor", fogColor);
 		}
 
 		// render chunks

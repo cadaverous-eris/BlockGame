@@ -3,6 +3,7 @@
 flat in vec3 normal;
 in vec2 texCoord;
 flat in vec3 color;
+in float cameraDistance;
 
 layout(location = 0) out vec4 accum;
 
@@ -11,6 +12,8 @@ uniform sampler2D opaqueColorTexSampler;
 uniform mat4 modelMatrix;
 uniform mat4 viewMatrix;
 uniform mat4 projectionMatrix;
+uniform float viewDistance;
+uniform vec3 fogColor;
 
 void writePixel(vec4 premultipliedReflect, vec4 transmit, float csZ) {
 	premultipliedReflect.a *= 1.0 - (transmit.r + transmit.g + transmit.b) * (1.0 / 3.0);
@@ -38,8 +41,12 @@ void main() {
 	float cosTheta = max(dot(normal, lightDir), 0.0f);
 	vec3 diffuse = cosTheta * lightColor;
 
-	vec4 fragColor = vec4(ambient + diffuse, 1.0f) * objectColor;
-	//vec4 fragColor = vec4(ambient + (diffuse * (1.0f - ambientStrength)), 1.0f) * objectColor;
+	float fogFactor = 1 - clamp(1 / exp(pow(cameraDistance / viewDistance * 0.8, 7)), 0.0, 1.0);
+
+	vec4 litColor = vec4(ambient + diffuse, 1.0f) * objectColor;
+	//vec4 litColor = vec4(ambient + (diffuse * (1 - ambientStrength)), 1.0f) * objectColor;
+
+	vec4 fragColor = mix(litColor, vec4(fogColor, 1.0f), fogFactor);
 
 	vec4 fragColorPremult = vec4(fragColor.rgb * fragColor.a, fragColor.a);
 	vec4 transmitColor = vec4(0.0, 0.0, 0.0, 1.0);//texelFetch(opaqueColorTexSampler, ivec2(gl_FragCoord.xy), 0);

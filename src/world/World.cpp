@@ -41,7 +41,7 @@ namespace eng {
 		const size_t meshingQueueSize = (worldRenderer) ? worldRenderer->getChunkBakery().queuedTasks() : 0;
 		if ((meshingQueueSize < meshingQueueLimit)/* && ((ticks % 1) == 0)*/) {
 			const auto loadLimit = std::min(meshingQueueLimit - meshingQueueSize, maxChunkLoads);
-			const int chunkLoadRadius = (loading_dist / Chunk::WIDTH);
+			const int chunkLoadRadius = (static_cast<size_t>(loading_dist) / Chunk::WIDTH);
 			for (int lr = 0; lr <= chunkLoadRadius; lr++) {
 				for (int cz = -lr; cz <= lr; cz++) {
 					for (int cx = (cz == lr || cz == -lr) ? 0 : lr; glm::abs(cx) <= lr; cx = -cx + static_cast<int>(cx <= 0)) {
@@ -61,7 +61,7 @@ namespace eng {
 		}
 
 		doFluidUpdates();
-		
+
 		doBlockUpdates();
 
 		for (auto it = loadedChunks.begin(); it != loadedChunks.end(); it++) {
@@ -74,7 +74,7 @@ namespace eng {
 			}
 
 			// TODO: handle chunk updates
-			
+
 			// TODO: random block ticks
 		}
 
@@ -234,18 +234,18 @@ namespace eng {
 	bool World::canLoadChunk(const ChunkCoord& chunkCoord) const {
 		const glm::ivec3 chunkCenter { ChunkCoord::toBlockPos(chunkCoord) + glm::ivec3(Chunk::WIDTH / 2, Chunk::WIDTH / 2, Chunk::WIDTH / 2) };
 		const auto distSqr = glm::distance2(static_cast<glm::vec3>(chunkCenter), player->getPosition());
-		return distSqr <= loading_dist_sqr;
+		return distSqr <= static_cast<float>(loading_dist_sqr);
 	}
 	bool World::shouldUnloadChunk(const ChunkCoord& chunkCoord) const {
 		const glm::vec3 chunkCenter { ChunkCoord::toBlockPos(chunkCoord) + glm::ivec3(Chunk::WIDTH / 2, Chunk::WIDTH / 2, Chunk::WIDTH / 2) };
 		const auto distSqr = glm::distance2(chunkCenter, player->getPosition());
-		return distSqr > unloading_dist_sqr;
+		return distSqr > static_cast<float>(unloading_dist_sqr);
 	}
 
 	void World::setChunkLoadRadius(const int loadRadius) noexcept {
 		World::loading_dist = loadRadius;
 		World::loading_dist_sqr = World::loading_dist * World::loading_dist;
-		World::unloading_dist = World::loading_dist + 16;
+		World::unloading_dist = World::loading_dist + 32;
 		World::unloading_dist_sqr = World::unloading_dist * World::unloading_dist;
 	}
 
@@ -339,7 +339,7 @@ namespace eng {
 			scheduledUpdate.delay--;
 			it++;
 		}
-		const auto updateCount = currentTickFluidUpdates.size();
+		//const auto updateCount = currentTickFluidUpdates.size();
 		//if (updateCount != prevUpdateCount)
 		//	std::cout << "Fluid Updates: " << updateCount << '\n';
 		for (const auto& fluidUpdate : currentTickFluidUpdates) {
