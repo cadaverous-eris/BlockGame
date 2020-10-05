@@ -41,6 +41,10 @@ target_include_directories(${MAIN_PROJECT_NAME} PRIVATE src)
 
 target_compile_definitions(${MAIN_PROJECT_NAME} PRIVATE NOMINMAX GLFW_INCLUDE_NONE PROJECT_NAME="${MAIN_PROJECT_TITLE}")
 
+if(CMAKE_CXX_COMPILER_ID MATCHES ".*Clang")
+	target_compile_options(${MAIN_PROJECT_NAME} PRIVATE "--stdlib=libstdc++")
+endif()
+
 target_link_libraries(
 	${MAIN_PROJECT_NAME}
 	PRIVATE

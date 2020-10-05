@@ -5,6 +5,7 @@
 #include <utility>
 #include <optional>
 #include <iostream>
+#include <stdexcept>
 
 #include <glm/vec2.hpp>
 
@@ -17,23 +18,29 @@ namespace eng {
 
 	public:
 
-		inline uuid() : uuid(v4()) {}
+		//inline uuid() : uuid(v4()) {}
 
-		static uuid v4();
+		// construct an zeroed-out uuid
+		[[nodiscard]] explicit inline uuid() : uuid(0, 0) {}
 
-		static inline constexpr uuid fromUints(uint64_t ab, uint64_t cd) noexcept {
+		// generate a random uuid
+		[[nodiscard]] static uuid v4();
+
+		[[nodiscard]] static inline constexpr uuid fromUints(uint64_t ab, uint64_t cd) noexcept {
 			return uuid { ab, cd };
 		}
-		static inline constexpr uuid fromUints(const std::pair<uint64_t, uint64_t>& abcd) noexcept {
+		[[nodiscard]] static inline constexpr uuid fromUints(const std::pair<uint64_t, uint64_t>& abcd) noexcept {
 			return uuid { abcd.first, abcd.second };
 		}
-		static inline constexpr uuid fromUints(const glm::u64vec2& abcd) noexcept {
+		[[nodiscard]] static inline constexpr uuid fromUints(const glm::u64vec2& abcd) noexcept {
 			return uuid { abcd.x, abcd.y };
 		}
 
-		inline constexpr std::pair<uint64_t, uint64_t> getUints() const noexcept {
+		[[nodiscard]] inline constexpr std::pair<uint64_t, uint64_t> getUints() const noexcept {
 			return std::pair<uint64_t, uint64_t> { ab, cd };
 		}
+
+		inline constexpr operator bool() const noexcept { return ab && cd; }
 
 		constexpr bool operator ==(const uuid& rhs) const noexcept {
 			return (ab == rhs.ab) && (cd == rhs.cd);
@@ -42,7 +49,7 @@ namespace eng {
 			return (ab != rhs.ab) || (cd != rhs.cd);
 		}
 
-		static constexpr std::optional<uuid> fromString(std::string_view str) noexcept {
+		[[nodiscard]] static constexpr std::optional<uuid> fromString(std::string_view str) noexcept {
             const bool hasDashes = str.size() == 36;
             if ((str.size() != 32) && !hasDashes)
 				return std::nullopt;
@@ -71,9 +78,21 @@ namespace eng {
             return uuid { ab, cd };
         }
 
-        std::string toString() const;
+        [[nodiscard]] std::string toString() const;
     };
 
     std::ostream& operator <<(std::ostream& os, const uuid& id);
+
+	/*inline namespace uuid_literals {
+
+		constexpr uuid operator "" _uuid(const char* chars, const size_t length) noexcept {
+			const std::string_view str(chars, length);
+			const auto uuidParseResult = uuid::fromString(str);
+			if (!uuidParseResult)
+				throw std::invalid_argument(std::string("Invalid uuid literal ") + std::string(str));
+			return *uuidParseResult;
+		}
+
+	}*/
 
 }
