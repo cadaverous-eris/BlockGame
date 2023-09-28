@@ -2,10 +2,10 @@ cmake_minimum_required(VERSION 3.17)
 
 
 set(MAIN_PROJECT_NAME game)
-set(MAIN_PROJECT_TITLE "Smol Game")
+set(MAIN_PROJECT_TITLE "Block Game")
 
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 if (MSVC)
@@ -41,6 +41,9 @@ target_include_directories(${MAIN_PROJECT_NAME} PRIVATE src)
 
 target_compile_definitions(${MAIN_PROJECT_NAME} PRIVATE NOMINMAX GLFW_INCLUDE_NONE PROJECT_NAME="${MAIN_PROJECT_TITLE}")
 
+if(CMAKE_CXX_COMPILER_ID MATCHES ".*GNU")
+	#target_compile_options(${MAIN_PROJECT_NAME} PRIVATE "-fext-numeric-literals")
+endif()
 if(CMAKE_CXX_COMPILER_ID MATCHES ".*Clang")
 	target_compile_options(${MAIN_PROJECT_NAME} PRIVATE "--stdlib=libstdc++")
 endif()

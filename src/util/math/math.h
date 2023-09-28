@@ -5,6 +5,7 @@
 #include <cmath>
 #include <cstring>
 #include <algorithm>
+#include <functional>
 #include <bit>
 #ifdef _MSC_VER
 #include <intrin.h>
@@ -43,7 +44,7 @@ namespace eng {
 	// TODO: remove once standard library math functions are made constexpr
 	template<typename T, typename U, typename = std::enable_if_t<std::is_floating_point_v<std::common_type_t<T, U>>>>
 	constexpr auto fmod(const T f, const U m) noexcept {
-		return f - (m * static_cast<int64_t>(f / m));
+		return f - (m * static_cast<std::common_type_t<T, U>>(static_cast<int64_t>(f / m)));
 	}
 
 	// TODO: remove once standard library math functions are made constexpr
@@ -54,17 +55,19 @@ namespace eng {
 		// but we have to substract 1 for negative values (unless f is already floored)
 		const auto i = static_cast<int64_t>(f);
 		const auto floored = static_cast<T>(i);
-		return ((f >= T{0}) ? floored : ((f == floored) ? f : floored - T{1}));
+		return floored - static_cast<T>((f < T{0}) && (f != floored));
+		//return ((f >= T{0}) ? floored : ((f == floored) ? f : floored - T{1}));
 	}
 	// TODO: remove once standard library math functions are made constexpr
 	template<typename T>
 	constexpr auto ceil(T f) noexcept ->
 			std::enable_if_t<std::numeric_limits<T>::is_iec559, T> {
 		// casting to int truncates the value, which is ceil(val) for negative values,
-		// but we have to add 1 for positive values (unless val is already ceiled == recasted int val)
+		// but we have to add 1 for positive values (unless val is already ceiled)
 		const auto i = static_cast<int64_t>(f);
 		const auto ceiled = static_cast<T>(i);
-		return ((f < T{0}) ? ceiled : ((f == ceiled) ? f : ceiled + T{1}));
+		return ceiled + static_cast<T>((f > T{0}) && (f != ceiled));
+		//return ((f < T{0}) ? ceiled : ((f == ceiled) ? f : ceiled + T{1}));
 	}
 
 	// ((i % m) + m) % m
@@ -212,6 +215,13 @@ namespace eng {
 	template<glm::length_t L, typename T, glm::qualifier Q, typename std::enable_if_t<std::is_floating_point_v<T>>* = nullptr>
 	constexpr bool epsNonzero(const glm::vec<L, T, Q>& a) {
 		return glm::any(glm::notEqual(a, glm::vec<L, T, Q>{0}, math::epsilon<T>));
+	}
+
+
+	// can be used to combine multiple hash values
+	inline constexpr void hashCombine(size_t& seed, size_t hash) noexcept {
+		hash += size_t{ 0x9e3779b9 } + (seed << 6) + (seed >> 2);
+		seed ^= hash;
 	}
 
 }

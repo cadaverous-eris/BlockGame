@@ -48,13 +48,25 @@ namespace eng {
 			return nextUint32();
 		}
 
+		// returns a random 32-bit unsigned integer
 		uint32_t nextUint32() noexcept;
+		// returns a random 64-bit unsigned integer
 		uint64_t nextUint64() noexcept;
 
-		// returns a random unsigned integer between 0 (inclusive) and bound (exclusive)
+		// return a random positive 32-bit signed integer
+		int32_t nextInt32() noexcept;
+		// return a random positive 64-bit signed integer
+		int64_t nextInt64() noexcept;
+
+		// returns a random 32-bit unsigned integer in the range [0, bound)
 		uint32_t nextUint32(uint32_t bound);
-		// returns a random unsigned integer between 0 (inclusive) and bound (exclusive)
+		// returns a random 64-bit unsigned integer in the range [0, bound)
 		uint64_t nextUint64(uint64_t bound);
+
+		// returns a random 32-bit unsigned integer in the range [min, bound)
+		uint32_t nextUint32(uint32_t min, uint32_t bound);
+		// returns a random 64-bit unsigned integer in the range [min, bound)
+		uint64_t nextUint64(uint64_t min, uint64_t bound);
 
 		// returns a random float between 0 (inclusive) and 1 (exclusive)
 		float nextFloat() noexcept;
@@ -66,6 +78,8 @@ namespace eng {
 
 		// convert a string into a seed
 		[[nodiscard]] static seed_t toSeed(std::string_view seedStr) noexcept;
+		// convert a string into a seed
+		[[nodiscard]] static seed_t toSeed(std::u8string_view seedStr) noexcept;
 
 	private:
 

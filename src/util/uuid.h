@@ -3,11 +3,15 @@
 #include <cstdint>
 #include <string>
 #include <utility>
+#include <functional>
 #include <optional>
 #include <iostream>
 #include <stdexcept>
 
 #include <glm/vec2.hpp>
+
+#include "util/math/math.h"
+//#include "util/ct_string.h"
 
 namespace eng {
 
@@ -79,9 +83,26 @@ namespace eng {
         }
 
         [[nodiscard]] std::string toString() const;
+
+		inline size_t hashCode() const noexcept {
+			size_t seed = 0;
+			std::hash<uint64_t> hasher;
+			hashCombine(seed, hasher(ab));
+			hashCombine(seed, hasher(cd));
+			return seed;
+		}
     };
 
     std::ostream& operator <<(std::ostream& os, const uuid& id);
+
+
+	/*template<ct_string uuidStr> requires (uuid::fromString(uuidStr).has_value())
+	constexpr uuid make_uuid() noexcept {
+		return *uuid::fromString(uuidStr);
+	}
+
+	template<ct_string uuidStr>
+	constexpr uuid uuid_v = make_uuid<uuidStr>();*/
 
 	/*inline namespace uuid_literals {
 
@@ -94,5 +115,15 @@ namespace eng {
 		}
 
 	}*/
+
+}
+
+namespace std {
+
+	template<> struct hash<eng::uuid> {
+		inline size_t operator()(const eng::uuid& uuid) const noexcept {
+			return uuid.hashCode();
+		}
+	};
 
 }

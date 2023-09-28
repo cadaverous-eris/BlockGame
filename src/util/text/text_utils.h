@@ -43,5 +43,4 @@ namespace eng {
 	std::string toUpperCase(std::string str);
 	std::string toUpperCase(std::string_view str);
 
-
 }

@@ -11,13 +11,16 @@ namespace nbt {
             case TagLong: return "TAG_Long";
             case TagFloat: return "TAG_Float";
             case TagDouble: return "TAG_Double";
-            case TagByteArray: return "TAG_Byte_Array";
             case TagString: return "TAG_String";
             case TagList: return "TAG_List";
             case TagCompound: return "TAG_Compound";
-            case TagIntArray: return "TAG_Int_Array";
-            case TagLongArray: return "TAG_Long_Array";
         }
+        if (tagType == TagType{ 7 })
+            return "TAG_Byte_Array";
+        else if (tagType == TagType{ 11 })
+            return "TAG_Int_Array";
+        else if (tagType == TagType{ 12 })
+            return "TAG_Long_Array";
         return "Invalid Tag Type";
     }
 
@@ -30,13 +33,16 @@ namespace nbt {
             case TagLong: return os << "TAG_Long";
             case TagFloat: return os << "TAG_Float";
             case TagDouble: return os << "TAG_Double";
-            case TagByteArray: return os << "TAG_Byte_Array";
             case TagString: return os << "TAG_String";
             case TagList: return os << "TAG_List";
             case TagCompound: return os << "TAG_Compound";
-            case TagIntArray: return os << "TAG_Int_Array";
-            case TagLongArray: return os << "TAG_Long_Array";
         }
+        if (tagType == TagType{ 7 })
+            return os << "TAG_Byte_Array";
+        else if (tagType == TagType{ 11 })
+            return os << "TAG_Int_Array";
+        else if (tagType == TagType{ 12 })
+            return os << "TAG_Long_Array";
         return os << "Invalid Tag Type";
     }
 

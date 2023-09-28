@@ -3,12 +3,12 @@ cmake_minimum_required(VERSION 3.17)
 include(FetchContent)
 
 
-set(GLFW_VERSION_TAG 3.3.2)
+set(GLFW_VERSION_TAG 3.3.4)
 set(GLM_VERSION_TAG 0.9.9.8)
-set(PHMAP_VERSION_TAG 1.32)
-set(ENTT_VERSION_TAG v3.5.0)
-set(FMT_VERSION_TAG 7.0.3)
-set(SPDLOG_VERSION_TAG v1.8.0)
+set(PHMAP_VERSION_TAG 1.33)
+set(ENTT_VERSION_TAG v3.7.1)
+set(FMT_VERSION_TAG 8.0.1)
+set(SPDLOG_VERSION_TAG v1.9.0)
 set(ZLIB_VERSION_TAG v1.2.11)
 
 
@@ -60,7 +60,7 @@ if (NOT glad_POPULATED)
 endif()
 
 
-### plf libraries (plf_colony, plf_list, and plf_stack) ###
+### plf libraries (plf_colony, plf_list, plf_stack, and plf_queue) ###
 FetchContent_Declare(
 		plf-colony
 		GIT_REPOSITORY https://github.com/mattreecebentley/plf_colony.git
@@ -76,11 +76,17 @@ FetchContent_Declare(
 		GIT_REPOSITORY https://github.com/mattreecebentley/plf_stack.git
 )
 FetchContent_GetProperties(plf-stack)
+FetchContent_Declare(
+		plf-queue
+		GIT_REPOSITORY https://github.com/mattreecebentley/plf_queue.git
+		GIT_TAG origin/main
+)
+FetchContent_GetProperties(plf-queue)
 
 set(PLF_INCLUDE_DIR "${FETCHCONTENT_BASE_DIR}/plf-src")
 file(MAKE_DIRECTORY ${PLF_INCLUDE_DIR})
 
-if ((NOT plf-colony_POPULATED) OR (NOT plf-list_POPULATED) OR (NOT plf-stack_POPULATED))
+if ((NOT plf-colony_POPULATED) OR (NOT plf-list_POPULATED) OR (NOT plf-stack_POPULATED) OR (NOT plf-queue_POPULATED))
 	add_library(plf INTERFACE)
 	target_include_directories(plf INTERFACE ${PLF_INCLUDE_DIR})
 endif()
@@ -98,6 +104,11 @@ if (NOT plf-stack_POPULATED)
 	FetchContent_Populate(plf-stack)
 	file(COPY "${plf-stack_SOURCE_DIR}/plf_stack.h" DESTINATION "${PLF_INCLUDE_DIR}/plf")
 	file(RENAME "${PLF_INCLUDE_DIR}/plf/plf_stack.h" "${PLF_INCLUDE_DIR}/plf/stack.h")
+endif()
+if (NOT plf-queue_POPULATED)
+	FetchContent_Populate(plf-queue)
+	file(COPY "${plf-queue_SOURCE_DIR}/plf_queue.h" DESTINATION "${PLF_INCLUDE_DIR}/plf")
+	file(RENAME "${PLF_INCLUDE_DIR}/plf/plf_queue.h" "${PLF_INCLUDE_DIR}/plf/queue.h")
 endif()
 
 
@@ -156,6 +167,9 @@ if (NOT fmtlib_POPULATED)
 	FetchContent_Populate(fmtlib)
 	add_subdirectory(${fmtlib_SOURCE_DIR} ${fmtlib_BINARY_DIR})
 	target_compile_definitions(fmt PUBLIC FMT_STATIC_THOUSANDS_SEPARATOR)
+	if(CMAKE_CXX_COMPILER_ID MATCHES ".*GNU")
+		target_compile_options(fmt PUBLIC "-fext-numeric-literals")
+	endif()
 endif()
 
 

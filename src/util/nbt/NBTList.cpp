@@ -18,18 +18,12 @@ namespace nbt {
     NBTList::NBTList(vector<nbt_float>&& v) noexcept : data(std::move(v)) {}
     NBTList::NBTList(const vector<nbt_double>& v) noexcept : data(v) {}
     NBTList::NBTList(vector<nbt_double>&& v) noexcept : data(std::move(v)) {}
-    NBTList::NBTList(const vector<nbt_byte_array>& v) noexcept : data(v) {}
-    NBTList::NBTList(vector<nbt_byte_array>&& v) noexcept : data(std::move(v)) {}
     NBTList::NBTList(const vector<nbt_string>& v) noexcept : data(v) {}
     NBTList::NBTList(vector<nbt_string>&& v) noexcept : data(std::move(v)) {}
     NBTList::NBTList(const vector<nbt_list>& v) noexcept : data(v) {}
     NBTList::NBTList(vector<nbt_list>&& v) noexcept : data(std::move(v)) {}
     NBTList::NBTList(const vector<nbt_compound>& v) noexcept : data(v) {}
     NBTList::NBTList(vector<nbt_compound>&& v) noexcept : data(std::move(v)) {}
-    NBTList::NBTList(const vector<nbt_int_array>& v) noexcept : data(v) {}
-    NBTList::NBTList(vector<nbt_int_array>&& v) noexcept : data(std::move(v)) {}
-    NBTList::NBTList(const vector<nbt_long_array>& v) noexcept : data(v) {}
-    NBTList::NBTList(vector<nbt_long_array>&& v) noexcept : data(std::move(v)) {}
 
     NBTList& NBTList::operator =(const vector<nbt_byte>& v) noexcept {
         data.emplace<vector<nbt_byte>>(v);
@@ -79,14 +73,6 @@ namespace nbt {
         data.emplace<vector<nbt_double>>(std::move(v));
         return *this;
     }
-    NBTList& NBTList::operator =(const vector<nbt_byte_array>& v) noexcept {
-        data.emplace<vector<nbt_byte_array>>(v);
-        return *this;
-    }
-    NBTList& NBTList::operator =(vector<nbt_byte_array>&& v) noexcept {
-        data.emplace<vector<nbt_byte_array>>(std::move(v));
-        return *this;
-    }
     NBTList& NBTList::operator =(const vector<nbt_string>& v) noexcept {
         data.emplace<vector<nbt_string>>(v);
         return *this;
@@ -109,22 +95,6 @@ namespace nbt {
     }
     NBTList& NBTList::operator =(vector<nbt_compound>&& v) noexcept {
         data.emplace<vector<nbt_compound>>(std::move(v));
-        return *this;
-    }
-    NBTList& NBTList::operator =(const vector<nbt_int_array>& v) noexcept {
-        data.emplace<vector<nbt_int_array>>(v);
-        return *this;
-    }
-    NBTList& NBTList::operator =(vector<nbt_int_array>&& v) noexcept {
-        data.emplace<vector<nbt_int_array>>(std::move(v));
-        return *this;
-    }
-    NBTList& NBTList::operator =(const vector<nbt_long_array>& v) noexcept {
-        data.emplace<vector<nbt_long_array>>(v);
-        return *this;
-    }
-    NBTList& NBTList::operator =(vector<nbt_long_array>&& v) noexcept {
-        data.emplace<vector<nbt_long_array>>(std::move(v));
         return *this;
     }
 
@@ -181,14 +151,6 @@ namespace nbt {
         if (isDoubles()) return std::get<vector<nbt_double>>(data);
         throw bad_nbt_cast();
     }
-    [[nodiscard]] std::vector<nbt_byte_array>& NBTList::asByteArrays() {
-        if (isByteArrays()) return std::get<vector<nbt_byte_array>>(data);
-        throw bad_nbt_cast();
-    }
-    [[nodiscard]] const std::vector<nbt_byte_array>& NBTList::asByteArrays() const {
-        if (isByteArrays()) return std::get<vector<nbt_byte_array>>(data);
-        throw bad_nbt_cast();
-    }
     [[nodiscard]] std::vector<nbt_string>& NBTList::asStrings() {
         if (isStrings()) return std::get<vector<nbt_string>>(data);
         throw bad_nbt_cast();
@@ -213,22 +175,7 @@ namespace nbt {
         if (isCompounds()) return std::get<vector<nbt_compound>>(data);
         throw bad_nbt_cast();
     }
-    [[nodiscard]] std::vector<nbt_int_array>& NBTList::asIntArrays() {
-        if (isIntArrays()) return std::get<vector<nbt_int_array>>(data);
-        throw bad_nbt_cast();
-    }
-    [[nodiscard]] const std::vector<nbt_int_array>& NBTList::asIntArrays() const {
-        if (isIntArrays()) return std::get<vector<nbt_int_array>>(data);
-        throw bad_nbt_cast();
-    }
-    [[nodiscard]] std::vector<nbt_long_array>& NBTList::asLongArrays() {
-        if (isLongArrays()) return std::get<vector<nbt_long_array>>(data);
-        throw bad_nbt_cast();
-    }
-    [[nodiscard]] const std::vector<nbt_long_array>& NBTList::asLongArrays() const {
-        if (isLongArrays()) return std::get<vector<nbt_long_array>>(data);
-        throw bad_nbt_cast();
-    }
+
 
     [[nodiscard]] std::vector<nbt_byte> NBTList::getBytes() const {
         if (isBytes()) return std::get<vector<nbt_byte>>(data);
@@ -254,10 +201,6 @@ namespace nbt {
         if (isDoubles()) return std::get<vector<nbt_double>>(data);
         throw bad_nbt_cast();
     }
-    [[nodiscard]] std::vector<nbt_byte_array> NBTList::getByteArrays() const {
-        if (isByteArrays()) return std::get<vector<nbt_byte_array>>(data);
-        throw bad_nbt_cast();
-    }
     [[nodiscard]] std::vector<nbt_string> NBTList::getStrings() const {
         if (isStrings()) return std::get<vector<nbt_string>>(data);
         throw bad_nbt_cast();
@@ -268,14 +211,6 @@ namespace nbt {
     }
     [[nodiscard]] std::vector<nbt_compound> NBTList::getCompounds() const {
         if (isCompounds()) return std::get<vector<nbt_compound>>(data);
-        throw bad_nbt_cast();
-    }
-    [[nodiscard]] std::vector<nbt_int_array> NBTList::getIntArrays() const {
-        if (isIntArrays()) return std::get<vector<nbt_int_array>>(data);
-        throw bad_nbt_cast();
-    }
-    [[nodiscard]] std::vector<nbt_long_array> NBTList::getLongArrays() const {
-        if (isLongArrays()) return std::get<vector<nbt_long_array>>(data);
         throw bad_nbt_cast();
     }
 
@@ -300,9 +235,6 @@ namespace nbt {
             case TagDouble:
                 data.emplace<vector<nbt_type<TagDouble>>>();
                 break;
-            case TagByteArray:
-                data.emplace<vector<nbt_type<TagByteArray>>>();
-                break;
             case TagString:
                 data.emplace<vector<nbt_type<TagString>>>();
                 break;
@@ -311,12 +243,6 @@ namespace nbt {
                 break;
             case TagCompound:
                 data.emplace<vector<nbt_type<TagCompound>>>();
-                break;
-            case TagIntArray:
-                data.emplace<vector<nbt_type<TagIntArray>>>();
-                break;
-            case TagLongArray:
-                data.emplace<vector<nbt_type<TagLongArray>>>();
                 break;
             default:
                 throw "Invalid tag type";

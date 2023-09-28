@@ -146,10 +146,6 @@ namespace nbt::parsing {
 				stackTop.payload.get().emplace<nbt_double>(readNumericPayload<TagDouble>());
 				stateStack.pop();
 				return;
-			case TagByteArray:
-				stackTop.payload.get().emplace<nbt_byte_array>(readIntegerArrayPayload<TagByteArray>());
-				stateStack.pop();
-				return;
 			case TagString:
 				stackTop.payload.get().emplace<nbt_string>(readStringPayload());
 				stateStack.pop();
@@ -170,12 +166,17 @@ namespace nbt::parsing {
 			case TagCompound:
 				stackTop.payload.get().emplace<TagCompound>();
 				return;
-			case TagIntArray:
-				stackTop.payload.get().emplace<nbt_int_array>(readIntegerArrayPayload<TagIntArray>());
+			}
+			if (tagType == TagType{ 7 }) {
+				stackTop.payload.get().emplace<nbt_list>(readIntegerArrayPayload<TagByte>());
 				stateStack.pop();
 				return;
-			case TagLongArray:
-				stackTop.payload.get().emplace<nbt_long_array>(readIntegerArrayPayload<TagLongArray>());
+			} else if (tagType == TagType{ 11 }) {
+				stackTop.payload.get().emplace<nbt_list>(readIntegerArrayPayload<TagInt>());
+				stateStack.pop();
+				return;
+			} else if (tagType == TagType{ 12 }) {
+				stackTop.payload.get().emplace<nbt_list>(readIntegerArrayPayload<TagLong>());
 				stateStack.pop();
 				return;
 			}
@@ -206,9 +207,6 @@ namespace nbt::parsing {
 			case TagDouble:
 				stackTop.payload.get().asListOf<TagDouble>().emplace_back(readNumericPayload<TagDouble>());
 				return;
-			case TagByteArray:
-				stackTop.payload.get().asListOf<TagByteArray>().emplace_back(readIntegerArrayPayload<TagByteArray>());
-				return;
 			case TagString:
 				stackTop.payload.get().asListOf<TagString>().emplace_back(readStringPayload());
 				return;
@@ -228,11 +226,15 @@ namespace nbt::parsing {
 				currentListItemStack.emplace(nbt_compound {});
 				stateStack.emplace(NBTRef(currentListItemStack.top()));
 				return;
-			case TagIntArray:
-				stackTop.payload.get().asListOf<TagIntArray>().emplace_back(readIntegerArrayPayload<TagIntArray>());
+			}
+			if (tagType == TagType{ 7 }) {
+				stackTop.payload.get().asListOf<TagList>().emplace_back(readIntegerArrayPayload<TagByte>());
 				return;
-			case TagLongArray:
-				stackTop.payload.get().asListOf<TagLongArray>().emplace_back(readIntegerArrayPayload<TagLongArray>());
+			} else if (tagType == TagType{ 11 }) {
+				stackTop.payload.get().asListOf<TagList>().emplace_back(readIntegerArrayPayload<TagInt>());
+				return;
+			} else if (tagType == TagType{ 12 }) {
+				stackTop.payload.get().asListOf<TagList>().emplace_back(readIntegerArrayPayload<TagLong>());
 				return;
 			}
 			throw ParseError(fmt::format("Invalid NBT Tag Type: {}", getTagTypeId(tagType)));
@@ -257,13 +259,12 @@ namespace nbt::parsing {
 			pos += valSize;
 			return eng::fromBigEndianByteSpan<NBTType>(getDataSpan<valSize>(offset));
 		}
-		template<TagType tagType, typename NBTType = nbt_type<tagType>, std::enable_if_t<((tagType == TagByteArray) || (tagType == TagIntArray) || (tagType == TagLongArray)), int> = 0>
-		NBTType readIntegerArrayPayload() {
-			using ValueType = typename NBTType::value_type;
+		template<TagType tagType, typename ValueType = nbt_type<tagType>, std::enable_if_t<((tagType == TagByte) || (tagType == TagInt) || (tagType == TagLong)), int> = 0>
+		nbt_list readIntegerArrayPayload() {
 			constexpr size_t valSize = sizeof(ValueType);
 			const size_t length = static_cast<size_t>(readNumericPayload<TagInt>());
-			NBTType payload {};
-			if constexpr (tagType == TagByteArray) {
+			nbt_list::vector<ValueType> payload {};
+			if constexpr (tagType == TagByte) {
 				if ((pos + (length * valSize)) > bytes.size())
 					throw ParseError("NBT data ended unexpectedly");
 				payload.resize(length);
@@ -274,7 +275,7 @@ namespace nbt::parsing {
 					payload.emplace_back(eng::fromBigEndianByteSpan<ValueType>(getDataSpan<valSize>(pos + (i * valSize))));
 			}
 			pos += length * valSize;
-			return payload;
+			return nbt_list(std::move(payload));
 		}
 		nbt_string readStringPayload() {
 			using CharType = typename nbt_string::value_type;
@@ -298,74 +299,61 @@ namespace nbt::parsing {
 				{
 					std::vector<nbt_byte> list {};
 					list.reserve(length);
-					return nbt_list(list);
+					return nbt_list(std::move(list));
 				}
 			case TagShort:
 				{
 					std::vector<nbt_short> list {};
 					list.reserve(length);
-					return nbt_list(list);
+					return nbt_list(std::move(list));
 				}
 			case TagInt:
 				{
 					std::vector<nbt_int> list {};
 					list.reserve(length);
-					return nbt_list(list);
+					return nbt_list(std::move(list));
 				}
 			case TagLong:
 				{
 					std::vector<nbt_long> list {};
 					list.reserve(length);
-					return nbt_list(list);
+					return nbt_list(std::move(list));
 				}
 			case TagFloat:
 				{
 					std::vector<nbt_float> list {};
 					list.reserve(length);
-					return nbt_list(list);
+					return nbt_list(std::move(list));
 				}
 			case TagDouble:
 				{
 					std::vector<nbt_double> list {};
 					list.reserve(length);
-					return nbt_list(list);
-				}
-			case TagByteArray:
-				{
-					std::vector<nbt_byte_array> list {};
-					list.reserve(length);
-					return nbt_list(list);
+					return nbt_list(std::move(list));
 				}
 			case TagString:
 				{
 					std::vector<nbt_string> list {};
 					list.reserve(length);
-					return nbt_list(list);
+					return nbt_list(std::move(list));
 				}
 			case TagList:
 				{
 					std::vector<nbt_list> list {};
 					list.reserve(length);
-					return nbt_list(list);
+					return nbt_list(std::move(list));
 				}
 			case TagCompound:
 				{
 					std::vector<nbt_compound> list {};
 					list.reserve(length);
-					return nbt_list(list);
+					return nbt_list(std::move(list));
 				}
-			case TagIntArray:
-				{
-					std::vector<nbt_int_array> list {};
-					list.reserve(length);
-					return nbt_list(list);
-				}
-			case TagLongArray:
-				{
-					std::vector<nbt_long_array> list {};
-					list.reserve(length);
-					return nbt_list(list);
-				}
+			}
+			if ((listType == TagType{ 7 }) || (listType == TagType{ 11 }) || (listType == TagType{ 12 })) {
+				std::vector<nbt_list> list {};
+				list.reserve(length);
+				return nbt_list(std::move(list));
 			}
 			throw ParseError(fmt::format("Invalid NBT Tag Type: {}", getTagTypeId(listType)));
 		}
@@ -843,12 +831,12 @@ namespace nbt::parsing {
 			if (pos == npos) break;
             const auto& stackTop = nbtStack.top().get();
 			const char currentChar = str[pos];
-            const bool parsingByteArray = stackTop.is<TagByteArray>();
-			const bool parsingList = stackTop.is<TagList>();
-			const bool parsingCompound= stackTop.is<TagCompound>();
-            const bool parsingIntArray = stackTop.is<TagIntArray>();
-            const bool parsingLongArray = stackTop.is<TagLongArray>();
+            const bool parsingByteArray = stackTop.isListOf<TagByte>();
+            const bool parsingIntArray = stackTop.isListOf<TagInt>();
+            const bool parsingLongArray = stackTop.isListOf<TagLong>();
             const bool parsingIntegerArray = parsingByteArray || parsingIntArray || parsingLongArray;
+			const bool parsingList = (!parsingIntegerArray) && stackTop.is<TagList>();
+			const bool parsingCompound= stackTop.is<TagCompound>();
 
 			if (parserState == ParserState::Key) {
 				if (currentChar == '}') {
@@ -883,21 +871,21 @@ namespace nbt::parsing {
 				}
 
                 if (parsingByteArray) {
-                    nbt_byte_array& arr = nbtStack.top().get().as<TagByteArray>();
+                    auto& arr = nbtStack.top().get().asListOf<TagByte>();
                     const auto parsedNumber = parseIntegral<nbt_byte>(str, pos, ""sv);
                     arr.emplace_back(parsedNumber);
                     parserState = ParserState::Comma;
 					continue;
                 }
                 if (parsingIntArray) {
-                    nbt_int_array& arr = nbtStack.top().get().as<TagIntArray>();
+                    auto& arr = nbtStack.top().get().asListOf<TagInt>();
                     const auto parsedNumber = parseIntegral<nbt_int>(str, pos, ""sv);
                     arr.emplace_back(parsedNumber);
                     parserState = ParserState::Comma;
 					continue;
                 }
                 if (parsingLongArray) {
-                    nbt_long_array& arr = nbtStack.top().get().as<TagLongArray>();
+                    auto& arr = nbtStack.top().get().asListOf<TagLong>();
                     const auto parsedNumber = parseIntegral<nbt_long>(str, pos, ""sv);
                     arr.emplace_back(parsedNumber);
                     parserState = ParserState::Comma;
@@ -922,9 +910,9 @@ namespace nbt::parsing {
                         if (isByteArray || isIntArray || isLongArray) {
                             if (str[pos + 2] != ';')
                                 throw ParseError(str, pos + 2, "Unexpected token '"s + str[pos + 2] + "', expected ';'"s);
-                            if (isByteArray) nbtStack.top().get().emplace<TagByteArray>();
-                            else if (isIntArray) nbtStack.top().get().emplace<TagIntArray>();
-                            else/* if (isLongArray)*/ nbtStack.top().get().emplace<TagLongArray>();
+                            if (isByteArray) nbtStack.top().get().emplace<TagList>(nbt_list::vector<nbt_byte>{});
+                            else if (isIntArray) nbtStack.top().get().emplace<TagList>(nbt_list::vector<nbt_int>{});
+                            else/* if (isLongArray)*/ nbtStack.top().get().emplace<TagList>(nbt_list::vector<nbt_long>{});
                             pos += 3;
                             parserState = ParserState::Value;
                             continue;

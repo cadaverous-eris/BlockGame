@@ -163,6 +163,7 @@ namespace eng {
 			//{ 0x2580, 0x259F }, // block elements
 			//{ 0x25A0, 0x25FF }, // geometric shapes
 			{ 0x2600, 0x26FF }, // misc. symbols
+			{ 0x2BF0, 0x2BF0 },
 			{ 0x1F300, 0x1F5FF }, // misc. symbols & pictographs
 			{ 0x1F600, 0x1F64F }, // emoticons
 			{ 0x1F900, 0x1F9FF }, // supplemental symbols and pictographs

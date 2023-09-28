@@ -29,13 +29,16 @@ namespace eng {
 		const char* vertexShaderSource = vertexShaderString.c_str();
 		const char* fragmentShaderSource = fragmentShaderString.c_str();
 		const char* geometryShaderSource = geometryShaderString.c_str();
+		const int32_t vertexShaderSourceLength = static_cast<int32_t>(vertexShaderString.size());
+		const int32_t fragmentShaderSourceLength = static_cast<int32_t>(fragmentShaderString.size());
+		const int32_t geometryShaderSourceLength = static_cast<int32_t>(geometryShaderString.size());
 
 		int success;
 		char infoLog[1024];
 
 		// vertex shader
 		const int vertexShader = glCreateShader(GL_VERTEX_SHADER);
-		glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
+		glShaderSource(vertexShader, 1, &vertexShaderSource, &vertexShaderSourceLength);
 		glCompileShader(vertexShader);
 		glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success); // check for shader compile errors
 		if (!success) {
@@ -46,7 +49,7 @@ namespace eng {
 
 		// fragment shader
 		const int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-		glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
+		glShaderSource(fragmentShader, 1, &fragmentShaderSource, &fragmentShaderSourceLength);
 		glCompileShader(fragmentShader);
 		glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success); // check for shader compile errors
 		if (!success) {
@@ -57,7 +60,7 @@ namespace eng {
 
 		// geometry shader
 		const int geometryShader = glCreateShader(GL_GEOMETRY_SHADER);
-		glShaderSource(geometryShader, 1, &geometryShaderSource, NULL);
+		glShaderSource(geometryShader, 1, &geometryShaderSource, &geometryShaderSourceLength);
 		glCompileShader(geometryShader);
 		glGetShaderiv(geometryShader, GL_COMPILE_STATUS, &success); // check for shader compile errors
 		if (!success) {
@@ -103,13 +106,15 @@ namespace eng {
 	ShaderProgram::ShaderProgram(const std::string& vertexShaderString, const std::string& fragmentShaderString) {
 		const char* vertexShaderSource = vertexShaderString.c_str();
 		const char* fragmentShaderSource = fragmentShaderString.c_str();
+		const int32_t vertexShaderSourceLength = static_cast<int32_t>(vertexShaderString.size());
+		const int32_t fragmentShaderSourceLength = static_cast<int32_t>(fragmentShaderString.size());
 
 		int success;
 		char infoLog[1024];
 
 		// vertex shader
 		const int vertexShader = glCreateShader(GL_VERTEX_SHADER);
-		glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
+		glShaderSource(vertexShader, 1, &vertexShaderSource, &vertexShaderSourceLength);
 		glCompileShader(vertexShader);
 		glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success); // check for shader compile errors
 		if (!success) {
@@ -120,7 +125,7 @@ namespace eng {
 
 		// fragment shader
 		const int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-		glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
+		glShaderSource(fragmentShader, 1, &fragmentShaderSource, &fragmentShaderSourceLength);
 		glCompileShader(fragmentShader);
 		glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success); // check for shader compile errors
 		if (!success) {

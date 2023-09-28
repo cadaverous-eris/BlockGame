@@ -21,18 +21,12 @@ namespace nbt {
     NBT::NBT(const nbt_long l) noexcept : value(l) {}
     NBT::NBT(const nbt_float f) noexcept : value(f) {}
     NBT::NBT(const nbt_double d) noexcept : value(d) {}
-    NBT::NBT(const nbt_byte_array& a) noexcept : value(a) {}
-    NBT::NBT(nbt_byte_array&& a) noexcept : value(std::move(a)) {}
     NBT::NBT(const nbt_string& s) noexcept : value(s) {}
     NBT::NBT(nbt_string&& s) noexcept : value(std::move(s)) {}
     NBT::NBT(const nbt_list& l) noexcept : value(l) {}
     NBT::NBT(nbt_list&& l) noexcept : value(std::move(l)) {}
     NBT::NBT(const nbt_compound& c) noexcept : value(c) {}
     NBT::NBT(nbt_compound&& c) noexcept : value(std::move(c)) {}
-    NBT::NBT(const nbt_int_array& a) noexcept : value(a) {}
-    NBT::NBT(nbt_int_array&& a) noexcept : value(std::move(a)) {}
-    NBT::NBT(const nbt_long_array& a) noexcept : value(a) {}
-    NBT::NBT(nbt_long_array&& a) noexcept : value(std::move(a)) {}
 
     NBT& NBT::operator =(const nbt_byte b) noexcept {
 		value = b;//value.emplace<nbt_byte>(b);
@@ -56,14 +50,6 @@ namespace nbt {
 	}
 	NBT& NBT::operator =(const nbt_double d) noexcept {
 		value = d;//value.emplace<nbt_double>(d);
-		return *this;
-	}
-	NBT& NBT::operator =(const nbt_byte_array& a) noexcept {
-		value = a;//value.emplace<nbt_byte_array>(a);
-		return *this;
-	}
-	NBT& NBT::operator =(nbt_byte_array&& a) noexcept {
-		value = std::move(a);//value.emplace<nbt_byte_array>(std::move(a));
 		return *this;
 	}
 	NBT& NBT::operator =(const nbt_string& s) noexcept {
@@ -90,22 +76,6 @@ namespace nbt {
 		value = std::move(c);//value.emplace<nbt_compound>(std::move(c));
 		return *this;
 	}
-	NBT& NBT::operator =(const nbt_int_array& a) noexcept {
-		value = a;//value.emplace<nbt_int_array>(a);
-		return *this;
-	}
-	NBT& NBT::operator =(nbt_int_array&& a) noexcept {
-		value = std::move(a);//value.emplace<nbt_int_array>(std::move(a));
-		return *this;
-	}
-	NBT& NBT::operator =(const nbt_long_array& a) noexcept {
-		value = a;//value.emplace<nbt_long_array>(a);
-		return *this;
-	}
-	NBT& NBT::operator =(nbt_long_array&& a) noexcept {
-		value = std::move(a);//value.emplace<nbt_long_array>(std::move(a));
-		return *this;
-	}
 
 
     bool NBT::is(const TagType tagType) const noexcept {
@@ -116,12 +86,9 @@ namespace nbt {
             case TagLong: return isLong();
             case TagFloat: return isFloat();
             case TagDouble: return isDouble();
-            case TagByteArray: return isByteArray();
             case TagString: return isString();
             case TagList: return isList();
             case TagCompound: return isCompound();
-            case TagIntArray: return isIntArray();
-            case TagLongArray: return isLongArray();
 		    default: return false;
 		}
 	}
@@ -175,14 +142,6 @@ namespace nbt {
 		if (isDouble()) return std::get<nbt_double>(value);
 		throw bad_nbt_cast();
 	}
-	nbt_byte_array& NBT::asByteArray() {
-		if (isByteArray()) return std::get<nbt_byte_array>(value);
-		throw bad_nbt_cast();
-	}
-	const nbt_byte_array& NBT::asByteArray() const {
-		if (isByteArray()) return std::get<nbt_byte_array>(value);
-		throw bad_nbt_cast();
-	}
 	nbt_string& NBT::asString() {
 		if (isString()) return std::get<nbt_string>(value);
 		throw bad_nbt_cast();
@@ -205,22 +164,6 @@ namespace nbt {
 	}
 	const nbt_compound& NBT::asCompound() const {
 		if (isCompound()) return std::get<nbt_compound>(value);
-		throw bad_nbt_cast();
-	}
-	nbt_int_array& NBT::asIntArray() {
-		if (isIntArray()) return std::get<nbt_int_array>(value);
-		throw bad_nbt_cast();
-	}
-	const nbt_int_array& NBT::asIntArray() const {
-		if (isIntArray()) return std::get<nbt_int_array>(value);
-		throw bad_nbt_cast();
-	}
-	nbt_long_array& NBT::asLongArray() {
-		if (isLongArray()) return std::get<nbt_long_array>(value);
-		throw bad_nbt_cast();
-	}
-	const nbt_long_array& NBT::asLongArray() const {
-		if (isLongArray()) return std::get<nbt_long_array>(value);
 		throw bad_nbt_cast();
 	}
 
@@ -264,10 +207,6 @@ namespace nbt {
         if (isLong()) return static_cast<nbt_double>(std::get<nbt_long>(value));
 		throw bad_nbt_cast();
 	}
-	nbt_byte_array NBT::getByteArray() const {
-		if (isByteArray()) return std::get<nbt_byte_array>(value);
-		throw bad_nbt_cast();
-	}
 	nbt_string NBT::getString() const {
 		if (isString()) return std::get<nbt_string>(value);
 		throw bad_nbt_cast();
@@ -280,14 +219,6 @@ namespace nbt {
 		if (isCompound()) return std::get<nbt_compound>(value);
 		throw bad_nbt_cast();
 	}
-	nbt_int_array NBT::getIntArray() const {
-		if (isIntArray()) return std::get<nbt_int_array>(value);
-		throw bad_nbt_cast();
-	}
-	nbt_long_array NBT::getLongArray() const {
-		if (isLongArray()) return std::get<nbt_long_array>(value);
-		throw bad_nbt_cast();
-	}
 
     NBT::operator nbt_byte() const { return getByte(); }
 	NBT::operator nbt_short() const { return getShort(); }
@@ -295,13 +226,10 @@ namespace nbt {
 	NBT::operator nbt_long() const { return getLong(); }
 	NBT::operator nbt_float() const { return getFloat(); }
 	NBT::operator nbt_double() const { return getDouble(); }
-	NBT::operator nbt_byte_array() const { return asByteArray(); }
 	NBT::operator nbt_string() const { return asString(); }
     NBT::operator nbt_string_view() const { return asString(); }
 	NBT::operator nbt_list() const { return asList(); }
 	NBT::operator nbt_compound() const { return asCompound(); }
-	NBT::operator nbt_int_array() const { return asIntArray(); }
-	NBT::operator nbt_long_array() const { return asLongArray(); }
 
 
     static std::string stringifyNBTString(const nbt_string_view str) {
@@ -390,26 +318,24 @@ namespace nbt {
                 return std::string(parsing::nan_string) + 'f';
 			if (std::isinf(val))
 				return ((val < 0) ? ('-' + std::string(parsing::infinity_string)) : std::string(parsing::infinity_string)) + 'F';
-			return fmt::format("{}F", val);
+			return fmt::format("{:#}F", val);
 		} else if (isDouble()) {
 			const nbt_double val = asDouble();
 			if (val != val)
                 return std::string(parsing::nan_string) + 'd';
 			if (std::isinf(val))
 				return ((val < 0) ? ('-' + std::string(parsing::infinity_string)) : std::string(parsing::infinity_string)) + 'D';
-			return fmt::format("{}D", val);
-		} else if (isByteArray()) {
-			return stringifyNBTIntegerArray<nbt_byte_array, 'B'>(asByteArray(), indentAmount, indentChar, indentLevel);
+			return fmt::format("{:#}D", val);
 		} else if (isString()) {
 			return stringifyNBTString(asString());
 		} else if (isList()) {
-			return asList().toSNBT(indentAmount, indentChar, indentLevel);
+			const auto& nbtList = asList();
+			if (nbtList.isBytes()) return stringifyNBTIntegerArray<nbt_list::vector<nbt_byte>, 'B'>(asListOf<TagByte>(), indentAmount, indentChar, indentLevel);
+			else if (nbtList.isInts()) return stringifyNBTIntegerArray<nbt_list::vector<nbt_int>, 'I'>(asListOf<TagInt>(), indentAmount, indentChar, indentLevel);
+			else if (nbtList.isLongs()) return stringifyNBTIntegerArray<nbt_list::vector<nbt_long>, 'L'>(asListOf<TagLong>(), indentAmount, indentChar, indentLevel);
+			else return nbtList.toSNBT(indentAmount, indentChar, indentLevel);
 		} else if (isCompound()) {
 			return asCompound().toSNBT(indentAmount, indentChar, indentLevel);
-		} else if (isIntArray()) {
-			return stringifyNBTIntegerArray<nbt_int_array, 'I'>(asIntArray(), indentAmount, indentChar, indentLevel);
-		} else if (isLongArray()) {
-			return stringifyNBTIntegerArray<nbt_long_array, 'L'>(asLongArray(), indentAmount, indentChar, indentLevel);
 		}
 		return "";
 	}
@@ -429,19 +355,19 @@ namespace nbt {
 		bytes.resize(vecSize + sizeof(Uint));
 		std::memcpy(bytes.data() + vecSize, &u, sizeof(Uint));
 	}
-	template<TagType tagType, typename T = nbt_type<tagType>, typename ValType = typename T::value_type, TagType valTagType = nbt_tag_type<ValType>, std::enable_if_t<((tagType == TagByteArray) || (tagType == TagIntArray) || (tagType == TagLongArray)), int> = 0>
+	template<TagType tagType, typename ValType = nbt_type<tagType>, typename T = nbt_list::vector<ValType>, std::enable_if_t<((tagType == TagByte) || (tagType == TagInt) || (tagType == TagLong)), int> = 0>
 	void writeIntegerArrayBytes(std::vector<unsigned char>& bytes, const T& t) {
 		const nbt_int length = static_cast<nbt_int>(t.size());
 		constexpr size_t valSize = sizeof(ValType);
 		writeNumericBytes<TagInt>(bytes, length);
-		if constexpr (tagType == TagByteArray) {
+		if constexpr (tagType == TagByte) {
 			const auto vecSize = bytes.size();
 			bytes.resize(vecSize + (static_cast<size_t>(length) * valSize));
 			std::memcpy(bytes.data() + vecSize, t.data(), static_cast<size_t>(length) * valSize);
 		} else {
 			bytes.reserve(bytes.size() + (static_cast<size_t>(length) * valSize));
 			for (const auto& val : t)
-				writeNumericBytes<valTagType>(bytes, val);
+				writeNumericBytes<tagType>(bytes, val);
 		}
 	}
 	void writeStringBytes(std::vector<unsigned char>& bytes, nbt_string_view s) {
@@ -467,7 +393,20 @@ namespace nbt {
 
 		vector<unsigned char> bytes;
 
-		writeTagTypeByte(bytes, this->getTagType());
+		bool isByteList = false;
+		bool isIntList = false;
+		bool isLongList = false;
+		if (this->isList()) {
+			const auto& list = this->asList();
+			if (list.isBytes()) isByteList = true;
+			else if (list.isInts()) isIntList = true;
+			else if (list.isLongs()) isLongList = true;
+		}
+
+		if (isByteList) writeTagTypeByte(bytes, TagType{ 7 });
+		else if (isIntList) writeTagTypeByte(bytes, TagType{ 11 });
+		else if (isLongList) writeTagTypeByte(bytes, TagType{ 12 });
+		else writeTagTypeByte(bytes, this->getTagType());
 		writeStringBytes(bytes, name);
 
 		stack<State> stateStack {};
@@ -501,17 +440,8 @@ namespace nbt {
 			case TagDouble:
 				writeNumericBytes<TagDouble>(bytes, nbt.as<TagDouble>());
 				break;
-			case TagByteArray:
-				writeIntegerArrayBytes<TagByteArray>(bytes, nbt.as<TagByteArray>());
-				break;
 			case TagString:
 				writeStringBytes(bytes, nbt.as<TagString>());
-				break;
-			case TagIntArray:
-				writeIntegerArrayBytes<TagIntArray>(bytes, nbt.as<TagIntArray>());
-				break;
-			case TagLongArray:
-				writeIntegerArrayBytes<TagLongArray>(bytes, nbt.as<TagLongArray>());
 				break;
 			case TagList:
 			case TagCompound:
@@ -527,7 +457,18 @@ namespace nbt {
 
 		if (this->isList()) {
 			const auto& list = this->asList();
-			pushListState(list, list.size());
+			if (isByteList) {
+				writeIntegerArrayBytes<TagByte>(bytes, list.as<TagByte>());
+				return bytes;
+			} else if (isIntList) {
+				writeIntegerArrayBytes<TagInt>(bytes, list.as<TagInt>());
+				return bytes;
+			} else if (isLongList) {
+				writeIntegerArrayBytes<TagLong>(bytes, list.as<TagLong>());
+				return bytes;
+			} else {
+				pushListState(list, list.size());
+			}
 		} else if (this->isCompound()) {
 			pushCompoundState(this->asCompound());
 		} else {
@@ -546,29 +487,51 @@ namespace nbt {
 				} else {
 					while (pos != end) {
 						const NBT& value = pos->second;
-						writeTagTypeByte(bytes, value.getTagType());
-						writeStringBytes(bytes, pos->first);
-						pos++;
 						if (value.isList()) {
 							const auto& list = value.asList();
-							const auto listSize = list.size();
-							if (listSize == 0) {
-								writeTagTypeByte(bytes, list.getTagType());
-								writeNumericBytes<TagInt>(bytes, static_cast<nbt_int>(listSize));
+							if (list.is<TagByte>()) {
+								writeTagTypeByte(bytes, TagType{ 7 });
+								writeStringBytes(bytes, pos->first);
+								pos++;
+								writeIntegerArrayBytes<TagByte>(bytes, list.as<TagByte>());
+							} else if (list.is<TagInt>()) {
+								writeTagTypeByte(bytes, TagType{ 11 });
+								writeStringBytes(bytes, pos->first);
+								pos++;
+								writeIntegerArrayBytes<TagInt>(bytes, list.as<TagInt>());
+							} else if (list.is<TagLong>()) {
+								writeTagTypeByte(bytes, TagType{ 12 });
+								writeStringBytes(bytes, pos->first);
+								pos++;
+								writeIntegerArrayBytes<TagLong>(bytes, list.as<TagLong>());
 							} else {
-								pushListState(list, listSize);
-								break;
-							}
-						} else if (value.isCompound()) {
-							const auto& compound = value.asCompound();
-							if (compound.empty()) {
-								writeTagTypeByte(bytes, TagEnd);
-							} else {
-								pushCompoundState(compound);
-								break;
+								writeTagTypeByte(bytes, value.getTagType());
+								writeStringBytes(bytes, pos->first);
+								pos++;
+								const auto listSize = list.size();
+								if (listSize == 0) {
+									writeTagTypeByte(bytes, list.getTagType());
+									writeNumericBytes<TagInt>(bytes, static_cast<nbt_int>(listSize));
+								} else {
+									pushListState(list, listSize);
+									break;
+								}
 							}
 						} else {
-							writeSimpleNBTBytes(value);
+							writeTagTypeByte(bytes, value.getTagType());
+							writeStringBytes(bytes, pos->first);
+							pos++;
+							if (value.isCompound()) {
+								const auto& compound = value.asCompound();
+								if (compound.empty()) {
+									writeTagTypeByte(bytes, TagEnd);
+								} else {
+									pushCompoundState(compound);
+									break;
+								}
+							} else {
+								writeSimpleNBTBytes(value);
+							}
 						}
 					}
 				}
@@ -580,6 +543,7 @@ namespace nbt {
 						using NBTType = typename std::decay_t<decltype(list)>::value_type;
 						constexpr TagType tagType = nbt_tag_type<NBTType>;
 						if constexpr (tagType == TagList) {
+							// TODO: write lists of bytes, ints, and longs as NBT Tag Arrays
 							pushListState(list[pos], list[pos].size());
 							pos++;
 						} else if constexpr (tagType == TagCompound) {
@@ -588,8 +552,8 @@ namespace nbt {
 							while (pos < end) {
 								if constexpr (tagType == TagString)
 									writeStringBytes(bytes, list[pos]);
-								else if constexpr ((tagType == TagByteArray) || (tagType == TagIntArray) || (tagType == TagLongArray))
-									writeIntegerArrayBytes<tagType>(bytes, list[pos]);
+								//else if constexpr ((tagType == TagByteArray) || (tagType == TagIntArray) || (tagType == TagLongArray))
+								//	writeIntegerArrayBytes<tagType>(bytes, list[pos]);
 								else
 									writeNumericBytes<tagType>(bytes, list[pos]);
 								pos++;

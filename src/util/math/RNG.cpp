@@ -1,6 +1,7 @@
 #include "RNG.h"
 
 #include <random>
+//#include <bit>
 
 #include <glm/ext/scalar_integer.hpp>
 
@@ -12,6 +13,7 @@ namespace eng {
 			float f;
 		} const pun = { i };
 		return pun.f;
+		//return std::bit_cast<float>(i);
 	}
 	static double asDouble(uint64_t i) noexcept {
 		union PunDouble {
@@ -19,6 +21,7 @@ namespace eng {
 			double f;
 		} const pun = { i };
 		return pun.f;
+		//return std::bit_cast<double>(i);
 	}
 
 	// FNV-1a hashing http://www.isthe.com/chongo/tech/comp/fnv/
@@ -59,6 +62,13 @@ namespace eng {
 		return (static_cast<uint64_t>(nextUint32()) << 32) | static_cast<uint64_t>(nextUint32());
 	}
 
+	int32_t RNG::nextInt32() noexcept {
+		return static_cast<int32_t>(nextUint32() & 0x7FFFFFFFu);
+	}
+	int64_t RNG::nextInt64() noexcept {
+		return (static_cast<int64_t>(nextInt32()) << 32) | static_cast<int64_t>(nextUint32());
+	}
+
 	uint32_t RNG::nextUint32(uint32_t bound) {
 		if (bound == 0) return nextUint32();
 		if (bound == 1) return 0;
@@ -88,6 +98,15 @@ namespace eng {
 		return r % bound;
 	}
 
+	uint32_t RNG::nextUint32(uint32_t min, uint32_t bound) {
+		if ((bound <= min) || (bound - min == 1)) return min;
+		return nextUint32(bound - min) + min;
+	}
+	uint64_t RNG::nextUint64(uint64_t min, uint64_t bound) {
+		if ((bound <= min) || (bound - min == 1)) return min;
+		return nextUint64(bound - min) + min;
+	}
+
 	float RNG::nextFloat() noexcept {
 		return asFloat(0x3F800000u | (nextUint32() >> 9)) - 1.0f;
 	}
@@ -101,6 +120,9 @@ namespace eng {
 	}
 
 	RNG::seed_t RNG::toSeed(std::string_view seedStr) noexcept {
+		return stringHash(seedStr);
+	}
+	RNG::seed_t RNG::toSeed(std::u8string_view seedStr) noexcept {
 		return stringHash(seedStr);
 	}
 

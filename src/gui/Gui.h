@@ -39,8 +39,8 @@ namespace eng {
 
         GuiComponent* focusedComponent;
 
-        std::optional<input::KeyInput> keyPressInput;
-        std::optional<char32_t> charInput;
+        //std::optional<input::KeyInput> keyPressInput;
+        //std::optional<char32_t> charInput;
 
 	public:
 		Gui(const std::string& guiId);

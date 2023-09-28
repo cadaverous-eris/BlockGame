@@ -70,8 +70,6 @@ namespace eng {
 		inline explicit constexpr operator glm::u16vec4() const noexcept { return { r, g, b, a }; }
 		inline explicit constexpr operator glm::u16vec3() const noexcept { return { r, g, b }; }
 
-		// TODO: uint32_t conversion functions
-
 		constexpr Color& operator *=(const Color& rhs) noexcept {
 			r = static_cast<uint8_t>(((r / 255.0f) * (rhs.r / 255.0f)) * 0xFF);
 			g = static_cast<uint8_t>(((g / 255.0f) * (rhs.g / 255.0f)) * 0xFF);
@@ -516,7 +514,7 @@ namespace eng {
 			return static_cast<uint8_t>(f * 0xFF);
 		}
 		constexpr uint8_t toHexByte(uint8_t h0, uint8_t h1) noexcept {
-			return ((h0 & 0xF) << 4) | (h1 & 0xF);
+			return static_cast<uint8_t>((h0 & 0xF) << 4) | (h1 & 0xF);
 		}
 
 		/*template<typename... CTs>
@@ -924,5 +922,15 @@ namespace eng {
 		*/
 
 	}
+
+}
+
+namespace std {
+
+	template<> struct hash<eng::Color> {
+		size_t operator ()(const eng::Color& color) const noexcept {
+			return static_cast<size_t>(static_cast<uint32_t>(eng::Color::uint_argb{ color }));
+		}
+	};
 
 }

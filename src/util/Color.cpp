@@ -1,7 +1,7 @@
 #include "Color.h"
 
 
-#include "util/text/text_utils.h"
+#include "util/text/text_utils.h" // for toLowerCase() function
 
 namespace eng {
 
